@@ -9,7 +9,7 @@
  ============================================================================
  */
 
-#include "../libGPT/libGPT.h"
+#include "libGPT.h"
 
 #include <stdio.h>
 #include <sys/socket.h>

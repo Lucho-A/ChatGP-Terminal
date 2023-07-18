@@ -15,7 +15,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include "../libGPT/libGPT.h"
+#include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
 #define PROGRAM_VERSION				"1.0.0"
