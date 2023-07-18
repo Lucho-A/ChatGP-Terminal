@@ -6,7 +6,7 @@
  Copyright   : 
  Description : Main file
  ============================================================================
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +19,8 @@
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
 #define PROGRAM_VERSION				"1.0.0"
-#define PROGRAM_URL					"www.github.com/lucho-a/chatgp-terminal"
-#define PROGRAM_CONTACT				"www.lucho-a.github.io"
+#define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
+#define PROGRAM_CONTACT				"https://lucho-a.github.io/"
 
 #define C_HRED 						"\e[0;91m"
 #define C_RED 						"\e[0;31m"
@@ -85,23 +85,25 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 }
 
 void usage(char *programName){
-	printf("\nUsage: $ %s --apikeyfile string(NULL) | --apikey string(NULL) --role string(\"\") --max-tokens int(256) --temperature double(0.5) --response-velocity int(100000)\n\n"
+	printf("\nUsage: \n\n$ %s --apikeyfile string(NULL) | --apikey string(NULL) --role string(\"\") --max-tokens int(256) "
+			"--temperature double(0.5) --response-velocity int(100000) "
+			"--message string(NULL)\n\n"
 			"Examples: \n\n"
 			"$ %s --apikeyfile \"/home/user/.cgpt_key.key\" --role \"Act as Musician\"\n"
 			"$ %s --apikeyfile \"/home/user/.cgpt_key.key\" --role \"Act as IT Professional\" --max-tokens 512\n"
 			"$ %s --apikey \"1234567890ABCD\"\n"
-			"$ %s --help\n\n",programName,programName,programName,programName,programName);
+			"$ %s --apikey \"1234567890ABCD\" --message \"Who was Chopin\"\n"
+			"$ %s --help\n\n",programName,programName,programName,programName,programName,programName);
 }
 
 int main(int argc, char *argv[]) {
-	char *apikey=NULL, *role=LIBGPT_DEFAULT_ROLE;
+	char *apikey=NULL, *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		if(strcmp(argv[i],"--version")==0){
-			printf("\n%s  %s v%s%s\n",C_HCYAN,PROGRAM_NAME, PROGRAM_VERSION,C_DEFAULT);
-			printf("\n%s  URL: %s%s",C_HWHITE,C_DEFAULT, PROGRAM_URL);
+			printf("\n%s  %s v%s%s (%s)\n",C_HCYAN,PROGRAM_NAME, PROGRAM_VERSION,C_DEFAULT, PROGRAM_URL);
 			printf("\n%s  Contact: %s%s\n\n",C_HWHITE,C_DEFAULT, PROGRAM_CONTACT);
 			exit(EXIT_SUCCESS);
 		}
@@ -136,6 +138,10 @@ int main(int argc, char *argv[]) {
 			responseVelocity=strtod(argv[i+1],NULL);
 			continue;
 		}
+		if(strcmp(argv[i],"--message")==0){
+			message=argv[i+1];
+			continue;
+		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -149,6 +155,14 @@ int main(int argc, char *argv[]) {
 	if(libGPT_init(&cgpt, apikey, role, maxTokens, temperature)==LIBGPT_INIT_ERROR){
 		perror("Init error");
 		exit(EXIT_FAILURE);
+	}
+	if(message!=NULL){
+		if(libGPT_send_chat(cgpt, &cgptResponse, message)<=0){
+			perror(cgptResponse.errorMessage);
+			exit(EXIT_FAILURE);
+		}
+		print_result(cgptResponse,responseVelocity, TRUE);
+		exit(EXIT_SUCCESS);
 	}
 	printf("\n");
 	do{
