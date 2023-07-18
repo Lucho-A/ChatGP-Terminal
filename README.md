@@ -1,5 +1,5 @@
 # ChatGP-Terminal
-The simplest and cutest hahah C-program (ANSI Style) for querying ChatGPT from Linux terminal.
+The simplest and cutest hahah C-program (ANSI Style) for querying ChatGPT from Linux terminal. At the moment (v1.0.0), only model 'gpt-3.5-turbo' is (partially) supported. 
 
 You can download it [here](https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal).
 
