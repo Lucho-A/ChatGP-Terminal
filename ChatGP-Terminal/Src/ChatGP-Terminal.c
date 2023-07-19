@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.2
+ Version     : 1.0.3
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.2"
+#define PROGRAM_VERSION				"1.0.3"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -35,7 +35,7 @@
 #define C_WHITE 					"\033[0;37m"
 #define C_DEFAULT 					"\033[0m"
 
-#define PROMPT						C_HCYAN";=exit) -> "C_DEFAULT
+#define PROMPT						";=exit) -> "
 #define BANNER 						printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
 
 int cancel=FALSE;
@@ -78,11 +78,6 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 			i++;
 			continue;
 		}
-		if(cgptResponse.message[i-1]=='%' && cgptResponse.message[i-1]=='%'){
-			printf("%%");
-			i++;
-			continue;
-		}
 		printf("%c",cgptResponse.message[i]);
 		fflush(stdout);
 	}
@@ -122,6 +117,9 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 		switch(resp){
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
 			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
+			break;
+		case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
+			printf("\n%s%s%s\n\n",C_HRED,"Time out. Try again...",C_DEFAULT);
 			break;
 		default:
 			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
@@ -215,7 +213,9 @@ int main(int argc, char *argv[]) {
 	printf("\n");
 	do{
 		cancel=FALSE;
+		printf("%s",C_HCYAN);
 		char *message=get_readline(PROMPT, TRUE);
+		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
 		free(message);

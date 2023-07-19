@@ -1,4 +1,16 @@
-#### v1.0.2:2023XXXX-Testing
+#### v1.0.3:20230719
+
+Bugs-Fixed:
+
+- (I think) prompt (user's input) & readline() prompt solved
+- Others like '%' on output
+
+Others:
+
+- default receiving message timeouting increased (35s)
+- minor changes & code cleaned-up
+
+#### v1.0.2:20230719
 
 Improvements:
 

@@ -72,9 +72,22 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		return LIBGPT_SOCKET_SEND_TIMEOUT_ERROR;
 	}
 	pollinHappened=pfds[0].revents & POLLOUT;
-	char payload[BUFFER_SIZE_1K]="";
-	char httpMsg[BUFFER_SIZE_8K]="";
-	snprintf(payload,BUFFER_SIZE_1K,
+	char payload[BUFFER_SIZE_8K]="";
+	char httpMsg[BUFFER_SIZE_16K]="";
+	char messageParsed[BUFFER_SIZE_4K]="";
+	int cont=0;
+	for(int i=0;i<strlen(message);i++,cont++){
+		switch(message[i]){
+		case '\"':
+		case '\\':
+			messageParsed[cont]='\\';
+			messageParsed[++cont]=message[i];
+			break;
+		default:
+			messageParsed[cont]=message[i];
+		}
+	}
+	snprintf(payload,BUFFER_SIZE_8K,
 			"{"
 			"\"model\":\"gpt-3.5-turbo\","
 			"\"messages\":["
@@ -82,8 +95,8 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			"{\"role\":\"user\",\"content\":\"%s\"}],"
 			"\"max_tokens\": %ld,"
 			"\"temperature\": %.2f"
-			"}\r\n\r\n",cgtp.systemRole,message,cgtp.maxTokens,cgtp.temperature);
-	snprintf(httpMsg,BUFFER_SIZE_8K,
+			"}\r\n\r\n",cgtp.systemRole,messageParsed,cgtp.maxTokens,cgtp.temperature);
+	snprintf(httpMsg,BUFFER_SIZE_16K,
 			"POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"
 			"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
