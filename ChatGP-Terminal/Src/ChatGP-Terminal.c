@@ -1,9 +1,10 @@
 /*
  ============================================================================
  Name        : ChatGP-Terminal.c
- Author      : L.
+ Author      : L. (lucho-a.github.io)
  Version     : 1.0.0
- Copyright   : 
+ Created on	 : 2023/07/18
+ Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
  */
@@ -20,7 +21,7 @@
 #define PROGRAM_NAME				"ChatGP-Terminal"
 #define PROGRAM_VERSION				"1.0.0"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
-#define PROGRAM_CONTACT				"https://lucho-a.github.io/"
+#define PROGRAM_CONTACT				"(https://lucho-a.github.io/)"
 
 #define C_HRED 						"\e[0;91m"
 #define C_RED 						"\e[0;31m"
@@ -38,11 +39,11 @@ static inline char * get_readline(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
-		lineRead = (char *)NULL;
+		lineRead=(char *)NULL;
 	}
 	lineRead = readline(prompt);
-	if (lineRead && *lineRead && addHistory) add_history (lineRead);
-	return (lineRead);
+	if(lineRead && *lineRead && addHistory) add_history(lineRead);
+	return(lineRead);
 }
 
 void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool finishReason){
@@ -103,8 +104,7 @@ int main(int argc, char *argv[]) {
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		if(strcmp(argv[i],"--version")==0){
-			printf("\n%s  %s v%s%s (%s)\n",C_HCYAN,PROGRAM_NAME, PROGRAM_VERSION,C_DEFAULT, PROGRAM_URL);
-			printf("\n%s  Contact: %s%s\n\n",C_HWHITE,C_DEFAULT, PROGRAM_CONTACT);
+			printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
 			exit(EXIT_SUCCESS);
 		}
 		if(strcmp(argv[i],"--apikeyfile")==0){
@@ -128,14 +128,26 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--max-tokens")==0){
 			maxTokens=strtoul(argv[i+1],NULL,10);
+			if(maxTokens<=0){
+				printf("\n%sMax.Tokens value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			continue;
 		}
 		if(strcmp(argv[i],"--temperature")==0){
 			temperature=strtod(argv[i+1],NULL);
+			if(temperature<=0){
+				printf("\n%sTemperature value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			continue;
 		}
 		if(strcmp(argv[i],"--response-velocity")==0){
 			responseVelocity=strtod(argv[i+1],NULL);
+			if(responseVelocity<=0){
+				printf("\n%sResponse velocity value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			continue;
 		}
 		if(strcmp(argv[i],"--message")==0){

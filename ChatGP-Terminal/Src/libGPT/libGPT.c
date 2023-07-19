@@ -1,9 +1,9 @@
 /*
  ============================================================================
  Name        : libGPT.c
- Author      : L.
- Version     : 0.0.1
- Created on	 : 2023/07/15
+ Author      : L. (lucho-a.github.io)
+ Version     : 1.0.0
+ Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
@@ -128,6 +128,8 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			return LIBGPT_POLLIN_ERROR;
 		}
 	}while(TRUE);
+
+	//TODO
 	char *token="\"error\": {";
 	if(strstr(cgptResponse->jsonMessage,token)!=NULL){
 		token="\"message\": \"";
@@ -151,7 +153,6 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 	}
 	return totalBytesReceived;
 }
-
 
 
 
