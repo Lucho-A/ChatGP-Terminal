@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.0
+ Version     : 1.0.1
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -15,26 +15,29 @@
 #include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <signal.h>
 
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.0"
+#define PROGRAM_VERSION				"1.0.1"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"(https://lucho-a.github.io/)"
 
-#define C_HRED 						"\e[0;91m"
-#define C_RED 						"\e[0;31m"
-#define C_HGREEN 					"\e[0;92m"
-#define C_YELLOW 					"\e[0;33m"
-#define C_HCYAN 					"\e[0;96m"
-#define C_CYAN 						"\e[0;36m"
-#define C_HWHITE 					"\e[0;97m"
-#define C_WHITE 					"\e[0;37m"
-#define C_DEFAULT 					"\e[0m"
+#define C_HRED 						"\033[0;91m"
+#define C_RED 						"\033[0;31m"
+#define C_HGREEN 					"\033[0;92m"
+#define C_YELLOW 					"\033[0;33m"
+#define C_HCYAN 					"\033[0;96m"
+#define C_CYAN 						"\033[0;36m"
+#define C_HWHITE 					"\033[0;97m"
+#define C_WHITE 					"\033[0;37m"
+#define C_DEFAULT 					"\033[0m"
 
 #define PROMPT						C_HCYAN";=exit) -> "C_DEFAULT
 #define BANNER 						printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
+
+int cancel=FALSE;
 
 static inline char * get_readline(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
@@ -49,7 +52,7 @@ static inline char * get_readline(char *prompt, bool addHistory){
 
 void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool finishReason){
 	printf("%s\n",C_HWHITE);
-	for(int i=0;cgptResponse.message[i]!=0;i++){
+	for(int i=0;cgptResponse.message[i]!=0 && !cancel;i++){
 		usleep(rand()%responseVelocity + 20000);
 		if(cgptResponse.message[i]=='\\'){
 			switch(cgptResponse.message[i+1]){
@@ -82,7 +85,8 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 		printf("%c",cgptResponse.message[i]);
 		fflush(stdout);
 	}
-	if(finishReason) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
+	if(finishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
+	if(cancel) printf("\n\n%sFinish status: cancel by user%s",C_DEFAULT,C_YELLOW);
 	printf("%s\n\n",C_DEFAULT);
 }
 
@@ -99,7 +103,20 @@ void usage(char *programName){
 			"$ %s --help\n\n",programName,programName,programName,programName,programName,programName);
 }
 
+void signal_handler(int signalType){
+	printf("\b\b  %s\n",C_DEFAULT);
+	switch(signalType){
+	case SIGINT:
+		printf("\n");
+		cancel=TRUE;
+		break;
+	default:
+		break;
+	}
+}
+
 int main(int argc, char *argv[]) {
+	signal(SIGINT, signal_handler);
 	char *apikey=NULL, *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY;
@@ -172,21 +189,22 @@ int main(int argc, char *argv[]) {
 	}
 	if(message!=NULL){
 		if(libGPT_send_chat(cgpt, &cgptResponse, message)<=0){
-			perror(cgptResponse.errorMessage);
-			exit(EXIT_FAILURE);
+			printf("\n%s%s%s\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
+		}else{
+			print_result(cgptResponse,responseVelocity, TRUE);
 		}
-		print_result(cgptResponse,responseVelocity, TRUE);
 		exit(EXIT_SUCCESS);
 	}
 	printf("\n");
 	do{
+		cancel=FALSE;
 		char *message=get_readline(PROMPT, TRUE);
 		if(strcmp(message,";")==0) break;
 		if(libGPT_send_chat(cgpt, &cgptResponse, message)<=0){
-			perror(cgptResponse.errorMessage);
-			exit(EXIT_FAILURE);
+			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
+		}else{
+			print_result(cgptResponse,responseVelocity, TRUE);
 		}
-		print_result(cgptResponse,responseVelocity, TRUE);
 	}while(TRUE);
 	printf("\n");
 	exit(EXIT_SUCCESS);

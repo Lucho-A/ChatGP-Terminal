@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.0
+ Version     : 1.0.1
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -37,7 +37,7 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 	int socketConn=0;
 	struct hostent *he;
 	struct in_addr **addr_list;
-	if((he=gethostbyname(LIBGPT_OPENAI_API_URL))==NULL) return -1;
+	if((he=gethostbyname(LIBGPT_OPENAI_API_URL))==NULL) return LIBGPT_GETTING_HOST_INFO_ERROR;
 	addr_list=(struct in_addr **) he->h_addr_list;
 	char *chatGptIp=inet_ntoa(*addr_list[0]);
 	struct sockaddr_in serverAddress;
@@ -98,7 +98,7 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		close(socketConn);
 		return LIBGPT_POLLIN_ERROR;
 	}
-	int bytesReceived=0,contI=0, totalBytesReceived=0;;
+	int bytesReceived=0,contI=0, totalBytesReceived=0;
 	pfds[0].events=POLLIN;
 	char buffer[BUFFER_SIZE_16K]="";
 	do{
