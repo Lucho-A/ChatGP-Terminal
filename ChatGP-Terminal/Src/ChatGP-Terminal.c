@@ -34,6 +34,7 @@
 #define C_DEFAULT 					"\e[0m"
 
 #define PROMPT						C_HCYAN";=exit) -> "C_DEFAULT
+#define BANNER 						printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
 
 static inline char * get_readline(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
@@ -86,7 +87,8 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 }
 
 void usage(char *programName){
-	printf("\nUsage: \n\n$ %s --apikeyfile string(NULL) | --apikey string(NULL) --role string(\"\") --max-tokens int(256) "
+	BANNER;
+	printf("Usage: \n\n$ %s --apikeyfile string(NULL) | --apikey string(NULL) --role string(\"\") --max-tokens int(256) "
 			"--temperature double(0.5) --response-velocity int(100000) "
 			"--message string(NULL)\n\n"
 			"Examples: \n\n"
@@ -104,7 +106,7 @@ int main(int argc, char *argv[]) {
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		if(strcmp(argv[i],"--version")==0){
-			printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
+			BANNER;
 			exit(EXIT_SUCCESS);
 		}
 		if(strcmp(argv[i],"--apikeyfile")==0){
