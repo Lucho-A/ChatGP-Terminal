@@ -1,6 +1,6 @@
 # ChatGP-Terminal
 <p align=justify>
-  The simplest and cutest hahah C-program (ANSI Style) for querying ChatGPT from Linux terminal. At the moment (v1.0.x), only model 'gpt-3.5-turbo' is supported. 
+  The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. At the moment, only model 'gpt-3.5-turbo' is supported. 
 </p>
 <ul>
   <li> Download: <a href="https://github.com/Lucho-A/ChatGP-Terminal/releases/latest">here</a></li>
@@ -32,6 +32,7 @@ sudo apt-get install libssl3 libreadline8 libc6
 
 ### Screenshots:
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/073deb73-42f9-400c-9cf0-9bf91e05cfd1)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/9d9fe8e5-5f9e-4378-a595-9e666f483c12)
 
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/4042464a-aefc-49e7-babb-9e3a6e796053)
 
