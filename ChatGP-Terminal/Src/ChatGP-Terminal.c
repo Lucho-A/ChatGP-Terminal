@@ -2,12 +2,12 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.1
+ Version     : 1.0.2
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
- */
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,13 +16,14 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <signal.h>
+#include <errno.h>
 
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.1"
+#define PROGRAM_VERSION				"1.0.2"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
-#define PROGRAM_CONTACT				"(https://lucho-a.github.io/)"
+#define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
 #define C_HRED 						"\033[0;91m"
 #define C_RED 						"\033[0;31m"
@@ -39,7 +40,7 @@
 
 int cancel=FALSE;
 
-static inline char * get_readline(char *prompt, bool addHistory){
+char * get_readline(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
@@ -86,21 +87,16 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 		fflush(stdout);
 	}
 	if(finishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
-	if(cancel) printf("\n\n%sFinish status: %scancel by user",C_DEFAULT,C_YELLOW);
+	if(finishReason && cancel) printf("\n\n%sFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
 	printf("%s\n\n",C_DEFAULT);
 }
 
 void usage(char *programName){
 	BANNER;
-	printf("Usage: \n\n$ %s --apikeyfile string(NULL) | --apikey string(NULL) --role string(\"\") --max-tokens int(256) "
-			"--temperature double(0.5) --response-velocity int(100000) "
-			"--message string(NULL)\n\n"
-			"Examples: \n\n"
-			"$ %s --apikeyfile \"/home/user/.cgpt_key.key\" --role \"Act as Musician\"\n"
-			"$ %s --apikeyfile \"/home/user/.cgpt_key.key\" --role \"Act as IT Professional\" --max-tokens 512\n"
-			"$ %s --apikey \"1234567890ABCD\"\n"
-			"$ %s --apikey \"1234567890ABCD\" --message \"Who was Chopin\"\n"
-			"$ %s --help\n\n",programName,programName,programName,programName,programName,programName);
+	char cwd[512]="", cmd[1024]="";
+	getcwd(cwd, sizeof(cwd));
+	snprintf(cmd, sizeof(cmd),"man %s/chatgp-terminal.1", cwd);
+	system(cmd);
 }
 
 void signal_handler(int signalType){
@@ -115,11 +111,32 @@ void signal_handler(int signalType){
 	}
 }
 
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus){
+	ChatGPTResponse cgptResponse;
+	int resp=0;
+	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))<=0){
+		if(resp==0){
+			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
+			return;
+		}
+		switch(resp){
+		case LIBGPT_RESPONSE_MESSAGE_ERROR:
+			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
+			break;
+		default:
+			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
+			break;
+		}
+	}else{
+		print_result(cgptResponse,responseVelocity, showFinishedStatus);
+	}
+}
+
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
 	char *apikey=NULL, *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY;
+	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY, showFinishedStatus=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		if(strcmp(argv[i],"--version")==0){
@@ -173,6 +190,11 @@ int main(int argc, char *argv[]) {
 			message=argv[i+1];
 			continue;
 		}
+		if(strcmp(argv[i],"--show-finished-status")==0){
+			showFinishedStatus=TRUE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -182,17 +204,12 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	ChatGPT cgpt;
-	ChatGPTResponse cgptResponse;
 	if(libGPT_init(&cgpt, apikey, role, maxTokens, temperature)==LIBGPT_INIT_ERROR){
-		perror("Init error");
+		printf("\n%sError init structure. %s%s\n\n",C_HRED,strerror(errno),C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		if(libGPT_send_chat(cgpt, &cgptResponse, message)<=0){
-			printf("\n%s%s%s\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
-		}else{
-			print_result(cgptResponse,responseVelocity, TRUE);
-		}
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
 		exit(EXIT_SUCCESS);
 	}
 	printf("\n");
@@ -200,13 +217,9 @@ int main(int argc, char *argv[]) {
 		cancel=FALSE;
 		char *message=get_readline(PROMPT, TRUE);
 		if(strcmp(message,";")==0) break;
-		if(libGPT_send_chat(cgpt, &cgptResponse, message)<=0){
-			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
-		}else{
-			print_result(cgptResponse,responseVelocity, TRUE);
-		}
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
+		free(message);
 	}while(TRUE);
 	printf("\n");
 	exit(EXIT_SUCCESS);
 }
-

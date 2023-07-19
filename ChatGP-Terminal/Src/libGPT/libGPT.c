@@ -67,7 +67,10 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 	pfds[0].fd=socketConn;
 	pfds[0].events=POLLOUT;
 	numEvents=poll(pfds,1,LIBGPT_SOCKET_SEND_TIMEOUT_MS);
-	if(numEvents==0) return LIBGPT_SOCKET_SEND_TIMEOUT_ERROR;
+	if(numEvents==0){
+		close(socketConn);
+		return LIBGPT_SOCKET_SEND_TIMEOUT_ERROR;
+	}
 	pollinHappened=pfds[0].revents & POLLOUT;
 	char payload[BUFFER_SIZE_1K]="";
 	char httpMsg[BUFFER_SIZE_8K]="";
@@ -105,7 +108,7 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		numEvents=poll(pfds, 1, LIBGPT_SOCKET_RECV_TIMEOUT_MS);
 		if(numEvents==0){
 			close(socketConn);
-			break;
+			return LIBGPT_SOCKET_RECV_TIMEOUT_ERROR;
 		}
 		pollinHappened = pfds[0].revents & POLLIN;
 		if (pollinHappened){

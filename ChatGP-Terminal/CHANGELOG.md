@@ -1,3 +1,18 @@
+#### v1.0.2:2023XXXX-Testing
+
+Improvements:
+
+- Accepts as option '--show-finished-status'. If set, shows the status at the end of the answers.
+	
+Bugs-Fixed:
+
+- Some I don't remember hhaha
+
+Others:
+
+- Show 'errno' description if getting info errors occurs.
+- minor changes & code cleaned-up
+
 #### v1.0.1:20230719
 
 Improvements:

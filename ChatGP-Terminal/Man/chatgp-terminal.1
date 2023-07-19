@@ -1,0 +1,50 @@
+.TH CHATGP_TERMINAL "1" "July 2023" "<lucho-a.github.io>" "User Commands"
+.SH NAME
+.TP	
+\fB\ChatGP-Terminal v1.0.2 by L. <https://lucho-a.github.io/>
+
+.SH SYNOPSYS
+.TP	
+chatgp-terminal [OPTION]
+
+.SH DESCRIPTION
+.TP	
+Options (and arguments -> 'dataType:defaultValue') supported:
+.TP	
+\fB\--apikeyfile\fR string:NULL
+.TP	
+\fB\--apikey\fR string:NULL
+.TP	
+\fB\--role\fR string:""
+.TP	
+\fB\--max-tokens\fR int:256
+.TP
+\fB\--temperature\fR double:0.5
+.TP	
+\fB\--response-velocity\fR int:100000
+.TP	
+\fB\--message\fR string:NULL
+.TP	
+\fB\--show-finished-status\fR //No argument required. If the option is not specified, FALSE by default
+	
+.SH EXAMPLES
+.TP	
+$ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --role "Act as Musician"
+.TP	
+$ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --role "Act as IT Professional" --max-tokens 512
+.TP	
+$ ./chatgp-terminal --apikey "1234567890ABCD"
+.TP	
+$ ./chatgp-terminal --apikey "1234567890ABCD" --message "Who was Chopin"
+.TP	
+$ ./chatgp-terminal --help
+	
+.SH AUTHOR
+.TP	
+\fB\L.\fR <https://lucho-a.github.io/>
+
+.SH COPYRIGHT
+.TP	
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+.TP	
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
