@@ -86,7 +86,7 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 		fflush(stdout);
 	}
 	if(finishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
-	if(cancel) printf("\n\n%sFinish status: cancel by user%s",C_DEFAULT,C_YELLOW);
+	if(cancel) printf("\n\n%sFinish status: %scancel by user",C_DEFAULT,C_YELLOW);
 	printf("%s\n\n",C_DEFAULT);
 }
 
