@@ -2,9 +2,11 @@
 <p align=justify>
   The simplest and cutest hahah C-program (ANSI Style) for querying ChatGPT from Linux terminal. At the moment (v1.0.x), only model 'gpt-3.5-turbo' is supported. 
 </p>
+<ul>
+  <li> Download: <a href="https://github.com/Lucho-A/ChatGP-Terminal/releases/latest">here</a></li>
+  <li>Documentation (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Man/chatgp-terminal.1">here</a></li>
+</ul>
 <p>
-  You can download it <a href="https://github.com/Lucho-A/ChatGP-Terminal/releases/latest">here</a>
-
   Have Fun!
 </p>
 
