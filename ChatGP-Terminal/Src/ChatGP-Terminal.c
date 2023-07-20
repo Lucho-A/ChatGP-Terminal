@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.3
+ Version     : 1.0.4
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.3"
+#define PROGRAM_VERSION				"1.0.4"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -36,7 +36,7 @@
 #define C_DEFAULT 					"\033[0m"
 
 #define PROMPT						";=exit) -> "
-#define BANNER 						printf("\n%s%s v%s by L. %s%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_CONTACT,C_DEFAULT);
+#define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
 int cancel=FALSE;
 
@@ -51,7 +51,7 @@ char * get_readline(char *prompt, bool addHistory){
 	return(lineRead);
 }
 
-void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool finishReason){
+void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool showFinishReason){
 	printf("%s\n",C_HWHITE);
 	for(int i=0;cgptResponse.message[i]!=0 && !cancel;i++){
 		usleep(rand()%responseVelocity + 20000);
@@ -81,24 +81,27 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 		printf("%c",cgptResponse.message[i]);
 		fflush(stdout);
 	}
-	if(finishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
-	if(finishReason && cancel) printf("\n\n%sFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
+	if(showFinishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
+	if(showFinishReason && cancel) printf("\n\n%sFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
 	printf("%s\n\n",C_DEFAULT);
 }
 
 void usage(char *programName){
 	BANNER;
+	/*
 	char cwd[512]="", cmd[1024]="";
 	getcwd(cwd, sizeof(cwd));
 	snprintf(cmd, sizeof(cmd),"man %s/chatgp-terminal.1", cwd);
 	system(cmd);
+	*/
+	system("man chatgp-terminal");
 }
 
 void signal_handler(int signalType){
 	printf("\b\b  %s\n",C_DEFAULT);
 	switch(signalType){
 	case SIGINT:
-		printf("\n");
+		printf("\b\n");
 		cancel=TRUE;
 		break;
 	default:
@@ -144,7 +147,7 @@ int main(int argc, char *argv[]) {
 		if(strcmp(argv[i],"--apikeyfile")==0){
 			FILE *f=fopen(argv[i+1],"r");
 			if(f==NULL){
-				perror("fopen");
+				printf("\n%sError opening API key file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			while(getline(&apikey, &len, f)!=-1);
@@ -170,7 +173,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--temperature")==0){
 			temperature=strtod(argv[i+1],NULL);
-			if(temperature<=0){
+			if(temperature<=0.0){
 				printf("\n%sTemperature value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
