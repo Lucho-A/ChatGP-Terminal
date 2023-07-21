@@ -30,8 +30,6 @@
 
 #define	BUFFER_SIZE_512B					512
 #define	BUFFER_SIZE_1K						1024
-#define	BUFFER_SIZE_4K						(BUFFER_SIZE_1K*4)
-#define	BUFFER_SIZE_8K						(BUFFER_SIZE_1K*8)
 #define	BUFFER_SIZE_16K						(BUFFER_SIZE_1K*16)
 
 #define	LIBGPT_DEFAULT_ROLE					""
@@ -61,22 +59,22 @@ enum errors{
 };
 
 typedef struct ChatGPT{
-	char api[BUFFER_SIZE_512B];
-	char systemRole[BUFFER_SIZE_512B];
+	char *api;
+	char *systemRole;
 	long int maxTokens;
 	double temperature;
 }ChatGPT;
 
 typedef struct ChatGPTResponse{
 	char jsonMessage[BUFFER_SIZE_16K];
-	int index; //TODO
+	//int index; //TODO
 	char message[BUFFER_SIZE_16K];
 	char errorMessage[BUFFER_SIZE_16K];
 	char finishReason[BUFFER_SIZE_512B];
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double);
+int libGPT_clean(ChatGPT *);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
-void libGPT_get_string_from_json(char *, char *, char *);
 
 #endif /* HEADERS_LIBGPT_H_ */

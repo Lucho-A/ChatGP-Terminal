@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.4
+ Version     : 1.0.5
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.4"
+#define PROGRAM_VERSION				"1.0.5"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -128,7 +128,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
-	char *apikey=NULL, *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
+	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY, showFinishedStatus=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
@@ -205,6 +205,7 @@ int main(int argc, char *argv[]) {
 	}
 	if(message!=NULL){
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
+		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
 	printf("\n");
@@ -217,6 +218,7 @@ int main(int argc, char *argv[]) {
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
 		free(message);
 	}while(TRUE);
+	libGPT_clean(&cgpt);
 	printf("\n");
 	exit(EXIT_SUCCESS);
 }

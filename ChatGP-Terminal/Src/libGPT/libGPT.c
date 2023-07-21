@@ -21,12 +21,28 @@
 #include <unistd.h>
 #include <errno.h>
 
-int libGPT_init(ChatGPT *cgtp, char *userApi, char *systemRole, long int maxTokens, double temperature){
-	snprintf(cgtp->api,sizeof(cgtp->api),"%s",userApi);
-	snprintf(cgtp->systemRole,sizeof(cgtp->systemRole),"%s",systemRole);
+int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, double temperature){
+	cgtp->api=malloc(strlen(api)*sizeof(char)+1);
+	snprintf(cgtp->api,strlen(api)+1,"%s",api);
+	cgtp->systemRole=malloc(strlen(systemRole)*sizeof(char)+1);
+	snprintf(cgtp->systemRole,strlen(systemRole)+1,"%s",systemRole);
 	cgtp->maxTokens=maxTokens;
 	cgtp->temperature=temperature;
 	return RETURN_OK;
+}
+
+int libGPT_clean(ChatGPT *cgpt){
+	free(cgpt->api);
+	free(cgpt->systemRole);
+	return RETURN_OK;
+}
+
+static void libGPT_get_string_from_json(char *token, char *result, char *jSon){
+	char *message=strstr(jSon,token);
+	if(message==NULL) return;
+	int i=0,cont=0;
+	for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) (result)[cont]=message[i];
+	result[cont]=0;
 }
 
 int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message){
@@ -91,6 +107,7 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			messageParsed[cont]=message[i];
 		}
 	}
+	messageParsed[cont]='\0';
 	bufferSize=strlen(messageParsed)*sizeof(char)+BUFFER_SIZE_512B;
 	char *payload=malloc(bufferSize);
 	memset(payload,0,bufferSize);
@@ -158,9 +175,7 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			return LIBGPT_POLLIN_ERROR;
 		}
 	}while(TRUE);
-
-	char *token="\"error\": {";
-	if(strstr(cgptResponse->jsonMessage,token)!=NULL){
+	if(strstr(cgptResponse->jsonMessage,"\"error\": {")!=NULL){
 		libGPT_get_string_from_json("\"message\": \"",cgptResponse->errorMessage, cgptResponse->jsonMessage);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
@@ -169,11 +184,4 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		libGPT_get_string_from_json("\"finish_reason\": \"",cgptResponse->finishReason, cgptResponse->jsonMessage);
 	}
 	return totalBytesReceived;
-}
-
-void libGPT_get_string_from_json(char *token, char *result, char *jSon){
-	char *message=strstr(jSon,token);
-	int i=0,cont=0;
-	for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) (result)[cont]=message[i];
-	result[cont]=0;
 }
