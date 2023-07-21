@@ -72,9 +72,9 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		return LIBGPT_SOCKET_SEND_TIMEOUT_ERROR;
 	}
 	pollinHappened=pfds[0].revents & POLLOUT;
-	char payload[BUFFER_SIZE_8K]="";
-	char httpMsg[BUFFER_SIZE_16K]="";
-	char messageParsed[BUFFER_SIZE_4K]="";
+	unsigned int bufferSize=strlen(message)*sizeof(char)*2;
+	char *messageParsed=malloc(bufferSize);
+	memset(messageParsed,0,bufferSize);
 	int cont=0;
 	for(int i=0;i<strlen(message);i++,cont++){
 		switch(message[i]){
@@ -83,11 +83,18 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			messageParsed[cont]='\\';
 			messageParsed[++cont]=message[i];
 			break;
+		case '\n':
+			messageParsed[cont]='\\';
+			messageParsed[++cont]='n';
+			break;
 		default:
 			messageParsed[cont]=message[i];
 		}
 	}
-	snprintf(payload,BUFFER_SIZE_8K,
+	bufferSize=strlen(messageParsed)*sizeof(char)+BUFFER_SIZE_512B;
+	char *payload=malloc(bufferSize);
+	memset(payload,0,bufferSize);
+	snprintf(payload,bufferSize,
 			"{"
 			"\"model\":\"gpt-3.5-turbo\","
 			"\"messages\":["
@@ -96,7 +103,11 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			"\"max_tokens\": %ld,"
 			"\"temperature\": %.2f"
 			"}\r\n\r\n",cgtp.systemRole,messageParsed,cgtp.maxTokens,cgtp.temperature);
-	snprintf(httpMsg,BUFFER_SIZE_16K,
+	free(messageParsed);
+	bufferSize=strlen(payload)*sizeof(char)+BUFFER_SIZE_512B;
+	char *httpMsg=malloc(bufferSize);
+	memset(httpMsg,0,bufferSize);
+	snprintf(httpMsg,bufferSize,
 			"POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"
 			"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
@@ -104,13 +115,16 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 			"authorization: Bearer %s\r\n"
 			"content-length: %ld\r\n\r\n"
 			"%s \r\n\r\n",LIBGPT_OPENAI_API_URL,cgtp.api,strlen(payload),payload);
+	free(payload);
 	if(pollinHappened){
 		bytesSent=SSL_write(sslConn, httpMsg, strlen(httpMsg));
+		free(httpMsg);
 		if(bytesSent<=0){
 			close(socketConn);
 			return LIBGPT_SENDING_PACKETS_ERROR;
 		}
 	}else{
+		free(httpMsg);
 		close(socketConn);
 		return LIBGPT_POLLIN_ERROR;
 	}
@@ -145,30 +159,21 @@ int libGPT_send_chat(ChatGPT cgtp, ChatGPTResponse *cgptResponse, char *message)
 		}
 	}while(TRUE);
 
-	//TODO
 	char *token="\"error\": {";
 	if(strstr(cgptResponse->jsonMessage,token)!=NULL){
-		token="\"message\": \"";
-		char *message=strstr(cgptResponse->jsonMessage,token);
-		int i=0,cont=0;
-		for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) cgptResponse->errorMessage[cont]=message[i];
-		cgptResponse->errorMessage[cont]=0;
+		libGPT_get_string_from_json("\"message\": \"",cgptResponse->errorMessage, cgptResponse->jsonMessage);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 	if(totalBytesReceived>0){
-		token="\"content\": \"";
-		char *message=strstr(cgptResponse->jsonMessage,token);
-		int i=0,cont=0;
-		for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) cgptResponse->message[cont]=message[i];
-		cgptResponse->message[cont]=0;
-		token="\"finish_reason\": \"";
-		message=strstr(cgptResponse->jsonMessage,token);
-		cont=0;
-		for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) cgptResponse->finishReason[cont]=message[i];
-		cgptResponse->finishReason[cont]=0;
+		libGPT_get_string_from_json("\"content\": \"",cgptResponse->message,cgptResponse->jsonMessage);
+		libGPT_get_string_from_json("\"finish_reason\": \"",cgptResponse->finishReason, cgptResponse->jsonMessage);
 	}
 	return totalBytesReceived;
 }
 
-
-
+void libGPT_get_string_from_json(char *token, char *result, char *jSon){
+	char *message=strstr(jSon,token);
+	int i=0,cont=0;
+	for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) (result)[cont]=message[i];
+	result[cont]=0;
+}

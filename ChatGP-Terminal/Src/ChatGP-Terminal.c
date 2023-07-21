@@ -25,15 +25,15 @@
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
-#define C_HRED 						"\033[0;91m"
-#define C_RED 						"\033[0;31m"
-#define C_HGREEN 					"\033[0;92m"
-#define C_YELLOW 					"\033[0;33m"
-#define C_HCYAN 					"\033[0;96m"
-#define C_CYAN 						"\033[0;36m"
-#define C_HWHITE 					"\033[0;97m"
-#define C_WHITE 					"\033[0;37m"
-#define C_DEFAULT 					"\033[0m"
+#define C_HRED 						"\e[0;91m"
+#define C_RED 						"\e[0;31m"
+#define C_HGREEN 					"\e[0;92m"
+#define C_YELLOW 					"\e[0;33m"
+#define C_HCYAN 					"\e[0;96m"
+#define C_CYAN 						"\e[0;36m"
+#define C_HWHITE 					"\e[0;97m"
+#define C_WHITE 					"\e[0;37m"
+#define C_DEFAULT 					"\e[0m"
 
 #define PROMPT						";=exit) -> "
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
@@ -82,26 +82,19 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 		fflush(stdout);
 	}
 	if(showFinishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
-	if(showFinishReason && cancel) printf("\n\n%sFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
+	if(showFinishReason && cancel) printf("%s\n\nFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
 	printf("%s\n\n",C_DEFAULT);
 }
 
 void usage(char *programName){
 	BANNER;
-	/*
-	char cwd[512]="", cmd[1024]="";
-	getcwd(cwd, sizeof(cwd));
-	snprintf(cmd, sizeof(cmd),"man %s/chatgp-terminal.1", cwd);
-	system(cmd);
-	*/
-	system("man chatgp-terminal");
+	printf("See: man chatgp-terminal or refer to the documentation <https://rb.gy/75nbf>\n\n");
 }
 
 void signal_handler(int signalType){
-	printf("\b\b  %s\n",C_DEFAULT);
+	printf("\b\b  %s",C_DEFAULT);
 	switch(signalType){
 	case SIGINT:
-		printf("\b\n");
 		cancel=TRUE;
 		break;
 	default:
@@ -140,6 +133,7 @@ int main(int argc, char *argv[]) {
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY, showFinishedStatus=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
+		char *tail=NULL;
 		if(strcmp(argv[i],"--version")==0){
 			BANNER;
 			exit(EXIT_SUCCESS);
@@ -164,24 +158,24 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--max-tokens")==0){
-			maxTokens=strtoul(argv[i+1],NULL,10);
-			if(maxTokens<=0){
+			maxTokens=strtoul(argv[i+1],&tail,10);
+			if(maxTokens<=0 || *tail!='\0'){
 				printf("\n%sMax.Tokens value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
 		if(strcmp(argv[i],"--temperature")==0){
-			temperature=strtod(argv[i+1],NULL);
-			if(temperature<=0.0){
+			temperature=strtod(argv[i+1],&tail);
+			if(temperature<=0.0 || *tail!='\0'){
 				printf("\n%sTemperature value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
 		if(strcmp(argv[i],"--response-velocity")==0){
-			responseVelocity=strtod(argv[i+1],NULL);
-			if(responseVelocity<=0){
+			responseVelocity=strtod(argv[i+1],&tail);
+			if(responseVelocity<=0 || *tail!='\0'){
 				printf("\n%sResponse velocity value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
@@ -200,8 +194,8 @@ int main(int argc, char *argv[]) {
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
 		}
-		printf("\n%sArgument '%s' not recognized.%s\n",C_HRED,argv[i],C_DEFAULT);
 		usage(argv[0]);
+		printf("%sArgument '%s' not recognized.%s\n\n",C_HRED,argv[i],C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
 	ChatGPT cgpt;

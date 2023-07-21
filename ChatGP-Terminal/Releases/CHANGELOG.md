@@ -1,3 +1,13 @@
+#### v1.0.4:20230720
+
+Bugs-Fixed:
+- command argument input validations 
+- user prompt string parsed fixed when '\n'
+
+Others:
+- improved string memory assignment.
+- minor changes & code cleaned-up
+
 #### v1.0.3:20230719
 
 Bugs-Fixed:

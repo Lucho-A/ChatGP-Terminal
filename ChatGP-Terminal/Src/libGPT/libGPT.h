@@ -77,5 +77,6 @@ typedef struct ChatGPTResponse{
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
+void libGPT_get_string_from_json(char *, char *, char *);
 
 #endif /* HEADERS_LIBGPT_H_ */
