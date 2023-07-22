@@ -103,7 +103,7 @@ void signal_handler(int signalType){
 }
 
 void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus){
-	ChatGPTResponse cgptResponse;
+	ChatGPTResponse cgptResponse={"","",""};
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))<=0){
 		if(resp==0){
@@ -112,7 +112,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 		}
 		switch(resp){
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
-			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.errorMessage,C_DEFAULT);
+			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.message,C_DEFAULT);
 			break;
 		case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
 			printf("\n%s%s%s\n\n",C_HRED,"Time out. Try again...",C_DEFAULT);

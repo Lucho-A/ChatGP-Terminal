@@ -67,9 +67,7 @@ typedef struct ChatGPT{
 
 typedef struct ChatGPTResponse{
 	char jsonMessage[BUFFER_SIZE_16K];
-	//int index; //TODO
 	char message[BUFFER_SIZE_16K];
-	char errorMessage[BUFFER_SIZE_16K];
 	char finishReason[BUFFER_SIZE_512B];
 }ChatGPTResponse;
 

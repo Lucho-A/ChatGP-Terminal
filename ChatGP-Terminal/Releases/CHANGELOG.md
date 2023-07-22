@@ -1,3 +1,8 @@
+#### v1.0.5:20230722-Testing
+
+Others:
+- code optimization, minor changes & code cleaned-up
+
 #### v1.0.4:20230720
 
 Bugs-Fixed:
