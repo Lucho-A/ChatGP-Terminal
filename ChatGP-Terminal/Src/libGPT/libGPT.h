@@ -26,11 +26,14 @@
 
 #define LIBGPT_SOCKET_CONNECT_TIMEOUT_S		5
 #define LIBGPT_SOCKET_SEND_TIMEOUT_MS		5000
-#define LIBGPT_SOCKET_RECV_TIMEOUT_MS		35000
+#define LIBGPT_SOCKET_RECV_TIMEOUT_MS		60000
 
 #define	BUFFER_SIZE_512B					512
-#define	BUFFER_SIZE_1K						1024
-#define	BUFFER_SIZE_16K						(BUFFER_SIZE_1K*16)
+#define	BUFFER_SIZE_16K						(1024*16)
+#define	BUFFER_SIZE_JSON_MESSAGE			(1024*16)
+#define	BUFFER_SIZE_MESSAGE					(1024*16)
+#define	BUFFER_SIZE_FINISHED_REASON			16
+#define	BUFFER_SIZE_TOTAL_TOKENS			8
 
 #define	LIBGPT_DEFAULT_ROLE					""
 #define	LIBGPT_DEFAULT_MAX_TOKENS			256
@@ -55,7 +58,9 @@ enum errors{
 	LIBGPT_POLLIN_ERROR,
 	LIBGPT_SOCKET_RECV_TIMEOUT_ERROR,
 	LIBGPT_RECEIVING_PACKETS_ERROR,
-	LIBGPT_RESPONSE_MESSAGE_ERROR
+	LIBGPT_RESPONSE_MESSAGE_ERROR,
+	LIBGPT_BUFFERSIZE_OVERFLOW,
+	LIBGPT_ZEROBYTESRECV_ERROR
 };
 
 typedef struct ChatGPT{
@@ -65,10 +70,12 @@ typedef struct ChatGPT{
 	double temperature;
 }ChatGPT;
 
+//TODO Dynamically memory allocation
 typedef struct ChatGPTResponse{
-	char jsonMessage[BUFFER_SIZE_16K];
-	char message[BUFFER_SIZE_16K];
-	char finishReason[BUFFER_SIZE_512B];
+	char jsonMessage[BUFFER_SIZE_JSON_MESSAGE];
+	char message[BUFFER_SIZE_MESSAGE];
+	char finishReason[BUFFER_SIZE_FINISHED_REASON];
+	char totalTokens[BUFFER_SIZE_TOTAL_TOKENS];
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double);

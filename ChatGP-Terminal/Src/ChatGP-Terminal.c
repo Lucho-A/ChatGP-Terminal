@@ -7,7 +7,7 @@
  Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,12 +51,12 @@ char * get_readline(char *prompt, bool addHistory){
 	return(lineRead);
 }
 
-void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool showFinishReason){
+void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showTotalTokens){
 	printf("%s\n",C_HWHITE);
-	for(int i=0;cgptResponse.message[i]!=0 && !cancel;i++){
+	for(int i=0;cgptResponse->message[i]!=0 && !cancel;i++){
 		usleep(rand()%responseVelocity + 20000);
-		if(cgptResponse.message[i]=='\\'){
-			switch(cgptResponse.message[i+1]){
+		if(cgptResponse->message[i]=='\\'){
+			switch(cgptResponse->message[i+1]){
 			case 'n':
 				printf("\n");
 				break;
@@ -78,12 +78,14 @@ void print_result(ChatGPTResponse cgptResponse, long int responseVelocity, bool 
 			i++;
 			continue;
 		}
-		printf("%c",cgptResponse.message[i]);
+		printf("%c",cgptResponse->message[i]);
 		fflush(stdout);
 	}
-	if(showFinishReason && !cancel) printf("\n\n%sFinish status: %s%s",C_DEFAULT,C_YELLOW,cgptResponse.finishReason);
-	if(showFinishReason && cancel) printf("%s\n\nFinish status: %scanceled by user",C_DEFAULT,C_YELLOW);
-	printf("%s\n\n",C_DEFAULT);
+	printf("%s\n",C_DEFAULT);
+	if(showFinishReason && !cancel) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
+	if(showFinishReason && cancel) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
+	if(showTotalTokens) printf("%s\nTotal tokens: %s%s\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
+	printf("%s\n",C_DEFAULT);
 }
 
 void usage(char *programName){
@@ -102,27 +104,30 @@ void signal_handler(int signalType){
 	}
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus){
-	ChatGPTResponse cgptResponse={"","",""};
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showTotalTokens){
+	ChatGPTResponse cgptResponse;
 	int resp=0;
-	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))<=0){
-		if(resp==0){
-			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
-			return;
-		}
+	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
 		switch(resp){
+		case LIBGPT_ZEROBYTESRECV_ERROR:
+			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
+			break;
+		case LIBGPT_BUFFERSIZE_OVERFLOW:
+			printf("\n%sBuffer size exceeded. Dynamically memory allocation for responses vars under development."
+					" Pls, let me know <%s>.%s\n\n",C_HRED,PROGRAM_URL,C_DEFAULT);
+			break;
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
 			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.message,C_DEFAULT);
 			break;
 		case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
-			printf("\n%s%s%s\n\n",C_HRED,"Time out. Try again...",C_DEFAULT);
+			printf("\n%sTime out. Try again...%s\n\n",C_HRED,C_DEFAULT);
 			break;
 		default:
 			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
 			break;
 		}
 	}else{
-		print_result(cgptResponse,responseVelocity, showFinishedStatus);
+		print_result(&cgptResponse,responseVelocity, showFinishedStatus, showTotalTokens);
 	}
 }
 
@@ -130,7 +135,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
 	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY, showFinishedStatus=FALSE;
+	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY;
+	bool showFinishedStatus=FALSE,showTotalTokens=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -190,6 +196,11 @@ int main(int argc, char *argv[]) {
 			i--;
 			continue;
 		}
+		if(strcmp(argv[i],"--show-total-tokens")==0){
+			showTotalTokens=TRUE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -204,7 +215,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
@@ -215,7 +226,7 @@ int main(int argc, char *argv[]) {
 		char *message=get_readline(PROMPT, TRUE);
 		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens);
 		free(message);
 	}while(TRUE);
 	libGPT_clean(&cgpt);

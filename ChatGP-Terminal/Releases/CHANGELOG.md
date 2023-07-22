@@ -1,6 +1,10 @@
-#### v1.0.5:20230722-Testing
+#### v1.0.5:20230722
+
+Feature:
+- Accepts as option '--show-finished-status'. If set, shows the response 'Total tokens' at the end of the response
 
 Others:
+- increased default timeouting to 60s
 - code optimization, minor changes & code cleaned-up
 
 #### v1.0.4:20230720

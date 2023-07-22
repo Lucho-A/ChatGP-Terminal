@@ -23,8 +23,10 @@
 
 int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, double temperature){
 	cgtp->api=malloc(strlen(api)*sizeof(char)+1);
+	if(cgtp->api ==NULL) return LIBGPT_INIT_ERROR;
 	snprintf(cgtp->api,strlen(api)+1,"%s",api);
 	cgtp->systemRole=malloc(strlen(systemRole)*sizeof(char)+1);
+	if(cgtp->systemRole ==NULL) return LIBGPT_INIT_ERROR;
 	snprintf(cgtp->systemRole,strlen(systemRole)+1,"%s",systemRole);
 	cgtp->maxTokens=maxTokens;
 	cgtp->temperature=temperature;
@@ -37,15 +39,43 @@ int libGPT_clean(ChatGPT *cgpt){
 	return RETURN_OK;
 }
 
-static void libGPT_get_string_from_json(char *token, char *result, char *jSon){
-	char *message=strstr(jSon,token);
-	if(message==NULL) return;
+static int libGPT_parse_result(ChatGPTResponse *cgptResponse){
+	//TODO Dynamically memory allocation
 	int i=0,cont=0;
-	for(i=strlen(token);message[i-1]=='\\' || message[i]!='\"';i++,cont++) (result)[cont]=message[i];
-	result[cont]=0;
+	char *message=strstr(cgptResponse->jsonMessage,"\"error\": {");
+	if(message!=NULL){
+		message=strstr(cgptResponse->jsonMessage,"\"message\": \"");
+		for(i=strlen("\"message\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_JSON_MESSAGE-1;i++,cont++) cgptResponse->message[cont]=message[i];
+		cgptResponse->message[cont]=0;
+		if(cont>=BUFFER_SIZE_JSON_MESSAGE-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+		return LIBGPT_RESPONSE_MESSAGE_ERROR;
+	}
+
+	cont=0;
+	message=strstr(cgptResponse->jsonMessage,"\"content\": \"");
+	for(i=strlen("\"content\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_MESSAGE-1;i++,cont++) cgptResponse->message[cont]=message[i];
+	cgptResponse->message[cont]=0;
+	if(cont>=BUFFER_SIZE_MESSAGE-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+
+	cont=0;
+	message=strstr(cgptResponse->jsonMessage,"\"finish_reason\": \"");
+	for(i=strlen("\"finish_reason\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_FINISHED_REASON-1;i++,cont++) cgptResponse->finishReason[cont]=message[i];
+	cgptResponse->finishReason[cont]=0;
+	if(cont>=BUFFER_SIZE_FINISHED_REASON-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+
+	cont=0;
+	message=strstr(cgptResponse->jsonMessage,"\"total_tokens\": ");
+	for(i=strlen("\"total_tokens\": ");cont<BUFFER_SIZE_TOTAL_TOKENS-1 && message[i]!='\n';i++,cont++) cgptResponse->totalTokens[cont]=message[i];
+	cgptResponse->totalTokens[cont]=0;
+	if(cont>=BUFFER_SIZE_TOTAL_TOKENS-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	return RETURN_OK;
 }
 
 int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message){
+	memset(cgptResponse->jsonMessage,0,BUFFER_SIZE_JSON_MESSAGE);
+	memset(cgptResponse->message,0,BUFFER_SIZE_MESSAGE);
+	memset(cgptResponse->finishReason,0,BUFFER_SIZE_FINISHED_REASON);
+	memset(cgptResponse->totalTokens,0,BUFFER_SIZE_TOTAL_TOKENS);
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
 	SSL *sslConn=NULL;
@@ -161,7 +191,8 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			bytesReceived=SSL_read(sslConn,buffer, BUFFER_SIZE_16K);
 			if(bytesReceived>0){
 				totalBytesReceived+=bytesReceived;
-				for(int i=0; i<bytesReceived; i++, contI++) cgptResponse->jsonMessage[contI]=buffer[i];
+				for(int i=0; i<bytesReceived && cont < BUFFER_SIZE_JSON_MESSAGE; i++, contI++) cgptResponse->jsonMessage[contI]=buffer[i];
+				if(cont>=BUFFER_SIZE_JSON_MESSAGE) return LIBGPT_BUFFERSIZE_OVERFLOW;
 				continue;
 			}
 			if(bytesReceived==0){
@@ -177,13 +208,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			return LIBGPT_POLLIN_ERROR;
 		}
 	}while(TRUE);
-	if(strstr(cgptResponse->jsonMessage,"\"error\": {")!=NULL){
-		libGPT_get_string_from_json("\"message\": \"",cgptResponse->message, cgptResponse->jsonMessage);
-		return LIBGPT_RESPONSE_MESSAGE_ERROR;
-	}
-	if(totalBytesReceived>0){
-		libGPT_get_string_from_json("\"content\": \"",cgptResponse->message,cgptResponse->jsonMessage);
-		libGPT_get_string_from_json("\"finish_reason\": \"",cgptResponse->finishReason, cgptResponse->jsonMessage);
-	}
-	return totalBytesReceived;
+	if(totalBytesReceived==0) return LIBGPT_ZEROBYTESRECV_ERROR;
+	return libGPT_parse_result(cgptResponse);
 }
