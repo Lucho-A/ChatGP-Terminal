@@ -1,3 +1,11 @@
+#### v1.0.6:20230723
+
+Feature:
+- Accepts as option '--no-create-context'. If set, a context (historical of user's prompt and responses) won't be generated (FALSE by default).
+
+Others:
+- code optimization & code cleaned-up
+
 #### v1.0.5:20230722
 
 Feature:

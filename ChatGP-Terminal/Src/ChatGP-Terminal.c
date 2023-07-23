@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.5
+ Version     : 1.0.6
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.5"
+#define PROGRAM_VERSION				"1.0.6"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -38,7 +38,9 @@
 #define PROMPT						";=exit) -> "
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
-int cancel=FALSE;
+#define	DEFAULT_RESPONSE_VELOCITY	100000
+
+bool cancel=FALSE;
 
 char * get_readline(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
@@ -84,7 +86,7 @@ void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool
 	printf("%s\n",C_DEFAULT);
 	if(showFinishReason && !cancel) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
 	if(showFinishReason && cancel) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
-	if(showTotalTokens) printf("%s\nTotal tokens: %s%s\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
+	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
 	printf("%s\n",C_DEFAULT);
 }
 
@@ -104,10 +106,10 @@ void signal_handler(int signalType){
 	}
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showTotalTokens){
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showTotalTokens, bool createContext){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
-	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
+	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message,createContext))!=RETURN_OK){
 		switch(resp){
 		case LIBGPT_ZEROBYTESRECV_ERROR:
 			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
@@ -123,20 +125,25 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			printf("\n%sTime out. Try again...%s\n\n",C_HRED,C_DEFAULT);
 			break;
 		default:
+			if(cancel){
+				printf("\n");
+				break;
+			}
 			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
 			break;
 		}
 	}else{
 		print_result(&cgptResponse,responseVelocity, showFinishedStatus, showTotalTokens);
 	}
+	libGPT_clean_response(&cgptResponse);
 }
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
 	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=LIBGPT_DEFAULT_RESPONSE_VELOCITY;
-	bool showFinishedStatus=FALSE,showTotalTokens=FALSE;
+	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY;
+	bool showFinishedStatus=FALSE,showTotalTokens=FALSE, createContext=TRUE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -201,6 +208,11 @@ int main(int argc, char *argv[]) {
 			i--;
 			continue;
 		}
+		if(strcmp(argv[i],"--no-create-context")==0){
+			createContext=FALSE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -215,7 +227,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens, FALSE);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
@@ -226,7 +238,12 @@ int main(int argc, char *argv[]) {
 		char *message=get_readline(PROMPT, TRUE);
 		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens);
+		if(strcmp(message,"")==0){
+			printf("\n");
+			free(message);
+			continue;
+		}
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens, createContext);
 		free(message);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
