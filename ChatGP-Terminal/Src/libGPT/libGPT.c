@@ -36,8 +36,6 @@ static char *assistantContext[MAX_CHAT_HISTORY]={""};
 static char *userContext[MAX_CHAT_HISTORY]={""};
 static int contContext=0;
 
-extern int tcp_connect(void);
-
 int libGPT_clean(ChatGPT *cgpt){
 	if(cgpt->api!=NULL) free(cgpt->api);
 	if(cgpt->systemRole!=NULL) free(cgpt->systemRole);
@@ -229,9 +227,9 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	pollinHappened=pfds[0].revents & POLLOUT;
 	if(pollinHappened){
 		int totalBytesSent=0;
-		while(bytesSent<strlen(httpMsg)){
+		while(totalBytesSent<strlen(httpMsg)){
 			bytesSent=SSL_write(sslConn, httpMsg + totalBytesSent, strlen(httpMsg) - totalBytesSent);
-
+			totalBytesSent+=bytesSent;
 		}
 		free(httpMsg);
 		if(bytesSent<=0){

@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.h
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.0
+ Version     : 1.0.2
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Header file
@@ -27,6 +27,7 @@
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
 
 #define PRINT_DBG							printf("\n\e[0;31mWTFFFF\e[0m\n");
+
 typedef enum{
 	FALSE=0,
 	TRUE
