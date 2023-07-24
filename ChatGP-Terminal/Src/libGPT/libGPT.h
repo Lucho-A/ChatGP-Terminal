@@ -26,6 +26,7 @@
 #define	LIBGPT_DEFAULT_MAX_TOKENS			256
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
 
+#define PRINT_DBG							printf("\n\e[0;31mWTFFFF\e[0m\n");
 typedef enum{
 	FALSE=0,
 	TRUE

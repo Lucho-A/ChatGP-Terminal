@@ -1,3 +1,12 @@
+#### v1.0.7:20230723
+
+Bug-Fixed:
+- parsed message fixed.
+- crashes fixed.
+
+Others:
+- code optimization & code cleaned-up
+
 #### v1.0.6:20230723
 
 Feature:

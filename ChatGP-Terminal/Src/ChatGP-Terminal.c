@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.6
+ Version     : 1.0.7
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.6"
+#define PROGRAM_VERSION				"1.0.7"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -231,6 +231,7 @@ int main(int argc, char *argv[]) {
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
+	rl_initialize();
 	printf("\n");
 	do{
 		cancel=FALSE;
@@ -240,11 +241,9 @@ int main(int argc, char *argv[]) {
 		if(strcmp(message,";")==0) break;
 		if(strcmp(message,"")==0){
 			printf("\n");
-			free(message);
 			continue;
 		}
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens, createContext);
-		free(message);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
 	printf("\n");
