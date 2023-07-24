@@ -3,6 +3,10 @@
 Feature:
 - Accepts as option '--no-create-context'. If set, a context (historical of user's prompt and responses) won't be generated (FALSE by default).
 
+Bug-Known:
+- for some reason, SSL_write() crash when some strings are include into the payload, for instance: 'malloc_consolidate(): invalid chunk size' crash with
+ 'free(): invalid pointer'
+
 Others:
 - code optimization & code cleaned-up
 
