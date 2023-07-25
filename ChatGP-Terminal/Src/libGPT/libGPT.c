@@ -113,7 +113,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	cgptResponse->httpResponse=NULL;
 	cgptResponse->message=NULL;
 	cgptResponse->finishReason=NULL;
-
 	char *messageParsed=malloc(strlen(message)*2);
 	memset(messageParsed,0,strlen(message)*2);
 	int cont=0;
@@ -173,22 +172,20 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 			"content-length: %ld\r\n\r\n"
 			"%s",OPENAI_API_URL,cgpt.api,strlen(payload),payload);
 	free(payload);
-
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
 	SSL *sslConn=NULL;
 	SSL_CTX *sslCtx=NULL;
 	int socketConn=0;
 	struct addrinfo hints, *res;
-	memset(&hints, 0, sizeof hints);
+	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-    int status;
-	if ((status=getaddrinfo(OPENAI_API_URL, NULL, &hints, &res)) != 0) return LIBGPT_GETTING_HOST_INFO_ERROR;
+	if (getaddrinfo(OPENAI_API_URL, NULL, &hints, &res)!=0) return LIBGPT_GETTING_HOST_INFO_ERROR;
 	struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
 	void *addr = &(ipv4->sin_addr);
-	char chatGptIp[INET6_ADDRSTRLEN];
-	inet_ntop(res->ai_family, addr, chatGptIp, sizeof chatGptIp);
+	char chatGptIp[INET_ADDRSTRLEN];
+	inet_ntop(res->ai_family, addr, chatGptIp, sizeof(chatGptIp));
     freeaddrinfo(res);
 	struct sockaddr_in serverAddress;
 	serverAddress.sin_family=AF_INET;
@@ -203,7 +200,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	FD_ZERO(&rFdset);
 	FD_SET(socketConn, &rFdset);
 	wFdset=rFdset;
-
 	tv.tv_sec=SOCKET_CONNECT_TIMEOUT_S;
 	tv.tv_usec=0;
 	if(select(socketConn+1,&rFdset,&wFdset,NULL,&tv)<=0) return LIBGPT_SOCKET_CONNECTION_TIMEOUT_ERROR;
@@ -213,7 +209,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	if(!SSL_set_fd(sslConn, socketConn)) return LIBGPT_SSL_FD_ERROR;
 	SSL_set_connect_state(sslConn);
 	SSL_set_tlsext_host_name(sslConn, OPENAI_API_URL);
-
 	if(!SSL_connect(sslConn)) return LIBGPT_SSL_CONNECT_ERROR;
 	fcntl(socketConn, F_SETFL, O_NONBLOCK);
 	pfds[0].fd=socketConn;
@@ -223,7 +218,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 		close(socketConn);
 		return LIBGPT_SOCKET_SEND_TIMEOUT_ERROR;
 	}
-
 	pollinHappened=pfds[0].revents & POLLOUT;
 	if(pollinHappened){
 		int totalBytesSent=0;
@@ -272,7 +266,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 			return LIBGPT_POLLIN_ERROR;
 		}
 	}while(TRUE);
-
 	if(totalBytesReceived==0) return LIBGPT_ZEROBYTESRECV_ERROR;
 	cgptResponse->httpResponse=malloc(strlen(bufferHTTP)+1);
 	snprintf(cgptResponse->httpResponse,strlen(bufferHTTP)+1,"%s",bufferHTTP);

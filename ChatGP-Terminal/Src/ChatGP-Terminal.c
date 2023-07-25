@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.7
+ Version     : 1.0.8
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.7"
+#define PROGRAM_VERSION				"1.0.8"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 

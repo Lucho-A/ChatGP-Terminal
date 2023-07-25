@@ -1,3 +1,8 @@
+#### v1.0.8:2023XXXX
+
+Others:
+- code optimization & code cleaned-up
+
 #### v1.0.7:20230723
 
 Bug-Fixed:
