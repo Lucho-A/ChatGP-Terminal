@@ -25,6 +25,7 @@
 #define	LIBGPT_DEFAULT_ROLE					""
 #define	LIBGPT_DEFAULT_MAX_TOKENS			256
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
+#define	LIBGPT_DEFAULT_MAX_CONTEXT_MSGS		5
 
 #define PRINT_DBG							printf("\n\e[0;31mWTFFFF\e[0m\n");
 
@@ -62,11 +63,14 @@ typedef struct ChatGPTResponse{
 	char *httpResponse;
 	char *message;
 	char *finishReason;
-	int totalTokens;
+	unsigned int promptTokens;
+	unsigned int completionTokens;
+	unsigned int totalTokens;
 }ChatGPTResponse;
 
-int libGPT_init(ChatGPT *, char *, char *, long int, double);
+int libGPT_init(ChatGPT *, char *, char *, long int, double, int);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *, bool);
+void libGPT_flush_history(void);
 int libGPT_clean(ChatGPT *);
 int libGPT_clean_response(ChatGPTResponse *);
 

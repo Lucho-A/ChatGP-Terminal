@@ -53,7 +53,7 @@ char * get_readline(char *prompt, bool addHistory){
 	return(lineRead);
 }
 
-void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showTotalTokens){
+void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
 	printf("%s\n",C_HWHITE);
 	for(int i=0;cgptResponse->message[i]!=0 && !cancel;i++){
 		usleep(rand()%responseVelocity + 20000);
@@ -86,6 +86,8 @@ void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool
 	printf("%s\n",C_DEFAULT);
 	if(showFinishReason && !cancel) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
 	if(showFinishReason && cancel) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
+	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->promptTokens);
+	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->completionTokens);
 	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
 	printf("%s\n",C_DEFAULT);
 }
@@ -106,7 +108,7 @@ void signal_handler(int signalType){
 	}
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showTotalTokens, bool createContext){
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool createContext){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message,createContext))!=RETURN_OK){
@@ -133,7 +135,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			break;
 		}
 	}else{
-		print_result(&cgptResponse,responseVelocity, showFinishedStatus, showTotalTokens);
+		print_result(&cgptResponse,responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
 	}
 	libGPT_clean_response(&cgptResponse);
 }
@@ -142,8 +144,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
 	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY;
-	bool showFinishedStatus=FALSE,showTotalTokens=FALSE, createContext=TRUE;
+	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
+	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE, createContext=TRUE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -194,12 +196,30 @@ int main(int argc, char *argv[]) {
 			}
 			continue;
 		}
+		if(strcmp(argv[i],"--max-context-messages")==0){
+			maxContextMessages=strtod(argv[i+1],&tail);
+			if(maxContextMessages<=0 || *tail!='\0'){
+				printf("\n%sMax. Context Messages value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			continue;
+		}
 		if(strcmp(argv[i],"--message")==0){
 			message=argv[i+1];
 			continue;
 		}
 		if(strcmp(argv[i],"--show-finished-status")==0){
 			showFinishedStatus=TRUE;
+			i--;
+			continue;
+		}
+		if(strcmp(argv[i],"--show-prompt-tokens")==0){
+			showPromptTokens=TRUE;
+			i--;
+			continue;
+		}
+		if(strcmp(argv[i],"--show-completion-tokens")==0){
+			showCompletionTokens=TRUE;
 			i--;
 			continue;
 		}
@@ -222,12 +242,12 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	ChatGPT cgpt;
-	if(libGPT_init(&cgpt, apikey, role, maxTokens, temperature)==LIBGPT_INIT_ERROR){
+	if(libGPT_init(&cgpt, apikey, role, maxTokens, temperature, maxContextMessages)==LIBGPT_INIT_ERROR){
 		printf("\n%sError init structure. %s%s\n\n",C_HRED,strerror(errno),C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens, FALSE);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, FALSE);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
@@ -239,11 +259,16 @@ int main(int argc, char *argv[]) {
 		char *message=get_readline(PROMPT, TRUE);
 		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
+		if(strcmp(message,"flush;")==0){
+			libGPT_flush_history();
+			printf("\n");
+			continue;
+		}
 		if(strcmp(message,"")==0){
 			printf("\n");
 			continue;
 		}
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showTotalTokens, createContext);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, createContext);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
 	printf("\n");
