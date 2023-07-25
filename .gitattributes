@@ -1,3 +1,4 @@
 ChatGP-Terminal/ export-ignore
-.gitignore
-.gitattributes
+README.md export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
