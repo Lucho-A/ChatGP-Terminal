@@ -1,3 +1,11 @@
+#### v1.0.9:2023XXXX-Testing
+
+Others:
+- changed '--response-velocity' default value to 20000
+- changed '--max-context-messages' default value to 3 
+- changed '--max-tokens' default value to 512 
+- code optimization, minor changes & code cleaned-up
+
 #### v1.0.8:20230725
 
 Feature:

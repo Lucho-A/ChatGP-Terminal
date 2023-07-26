@@ -43,9 +43,11 @@ static int maxHistoryContext=0;
 
 void libGPT_flush_history(void){
 	while(historyContext!=NULL){
-		if(historyContext->userMessage!=NULL) free(historyContext->userMessage);
-		if(historyContext->assistantMessage!=NULL) free(historyContext->assistantMessage);
-		historyContext=historyContext->nextMessage;
+		Messages *temp=historyContext;
+		historyContext=temp->nextMessage;
+		if(temp->userMessage!=NULL) free(temp->userMessage);
+		if(temp->assistantMessage!=NULL) free(temp->assistantMessage);
+		free(temp);
 	}
 	historyContext=NULL;
 	contHistoryContext=0;
@@ -54,6 +56,7 @@ void libGPT_flush_history(void){
 int libGPT_clean(ChatGPT *cgpt){
 	if(cgpt->api!=NULL) free(cgpt->api);
 	if(cgpt->systemRole!=NULL) free(cgpt->systemRole);
+	libGPT_flush_history();
 	return RETURN_OK;
 }
 
@@ -82,26 +85,28 @@ int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, 
 	return RETURN_OK;
 }
 
+int get_string_from_token(char *text, char *token, char *result, char endChar){
+	int cont=0;
+	char *message=strstr(text,token);
+	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar) && cont<BUFFER_SIZE_16K;i++,cont++) result[cont]=message[i];
+	result[cont]='\0';
+	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	return RETURN_OK;
+}
+
 static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse, bool createContext){
 	char buffer[BUFFER_SIZE_16K]="";
-	int i=0,cont=0;
-	char *message=strstr(cgptResponse->httpResponse,"\"error\": {");
-	if(message!=NULL){
-		message=strstr(cgptResponse->httpResponse,"\"message\": \"");
-		for(i=strlen("\"message\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_16K;i++,cont++) buffer[cont]=message[i];
-		if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(strstr(cgptResponse->httpResponse,"\"error\": {")!=NULL){
+		if(get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 		cgptResponse->message=malloc(strlen(buffer)+1);
 		snprintf(cgptResponse->message,strlen(buffer)+1,"%s", buffer);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 
-	memset(buffer,0,BUFFER_SIZE_16K);
-	cont=0;
-	message=strstr(cgptResponse->httpResponse,"\"content\": \"");
-	for(i=strlen("\"content\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_16K;i++,cont++) buffer[cont]=message[i];
-	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->message=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->message,strlen(buffer)+1,"%s", buffer);
+
 	if(createContext){
 		Messages *newMessage=malloc(sizeof(Messages));
 		newMessage->userMessage=malloc(strlen(messageSent)+1);
@@ -110,7 +115,13 @@ static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse,
 		newMessage->assistantMessage=malloc(strlen(cgptResponse->message)+1);
 		snprintf(newMessage->assistantMessage,strlen(cgptResponse->message)+1,"%s",cgptResponse->message);
 		if(historyContext!=NULL){
-			if(contHistoryContext>=maxHistoryContext) historyContext=historyContext->nextMessage;
+			if(contHistoryContext>=maxHistoryContext){
+				Messages *temp=historyContext->nextMessage;
+				if(historyContext->userMessage!=NULL) free(historyContext->userMessage);
+				if(historyContext->assistantMessage!=NULL) free(historyContext->assistantMessage);
+				free(historyContext);
+				historyContext=temp;
+			}
 			Messages *temp=historyContext;
 			while(temp->nextMessage!=NULL) temp=temp->nextMessage;
 			temp->nextMessage=newMessage;
@@ -121,33 +132,17 @@ static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse,
 		contHistoryContext++;
 	}
 
-	memset(buffer,0,BUFFER_SIZE_16K);
-	cont=0;
-	message=strstr(cgptResponse->httpResponse,"\"finish_reason\": \"");
-	for(i=strlen("\"finish_reason\": \"");(message[i-1]=='\\' || message[i]!='\"') && cont<BUFFER_SIZE_16K;i++,cont++) buffer[cont]=message[i];
-	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
 
-	memset(buffer,0,BUFFER_SIZE_16K);
-	cont=0;
-	message=strstr(cgptResponse->httpResponse,"\"prompt_tokens\": ");
-	for(i=strlen("\"prompt_tokens\": ");cont<BUFFER_SIZE_16K-1 && message[i]!='\n';i++,cont++) buffer[cont]=message[i];
-	if(cont>=BUFFER_SIZE_16K-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->promptTokens=strtol(buffer,NULL,10);
 
-	memset(buffer,0,BUFFER_SIZE_16K);
-	cont=0;
-	message=strstr(cgptResponse->httpResponse,"\"completion_tokens\": ");
-	for(i=strlen("\"completion_tokens\": ");cont<BUFFER_SIZE_16K-1 && message[i]!='\n';i++,cont++) buffer[cont]=message[i];
-	if(cont>=BUFFER_SIZE_16K-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->completionTokens=strtol(buffer,NULL,10);
 
-	memset(buffer,0,BUFFER_SIZE_16K);
-	cont=0;
-	message=strstr(cgptResponse->httpResponse,"\"total_tokens\": ");
-	for(i=strlen("\"total_tokens\": ");cont<BUFFER_SIZE_16K-1 && message[i]!='\n';i++,cont++) buffer[cont]=message[i];
-	if(cont>=BUFFER_SIZE_16K-1) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 
 	return RETURN_OK;
@@ -157,6 +152,9 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	cgptResponse->httpResponse=NULL;
 	cgptResponse->message=NULL;
 	cgptResponse->finishReason=NULL;
+	cgptResponse->promptTokens=0;
+	cgptResponse->completionTokens=0;
+	cgptResponse->totalTokens=0;
 	char *messageParsed=malloc(strlen(message)*2);
 	memset(messageParsed,0,strlen(message)*2);
 	int cont=0;

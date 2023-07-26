@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.8
+ Version     : 1.0.9
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.8"
+#define PROGRAM_VERSION				"1.0.9"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -38,7 +38,7 @@
 #define PROMPT						";=exit) -> "
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
-#define	DEFAULT_RESPONSE_VELOCITY	100000
+#define	DEFAULT_RESPONSE_VELOCITY	20000
 
 bool cancel=FALSE;
 
@@ -117,8 +117,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
 			break;
 		case LIBGPT_BUFFERSIZE_OVERFLOW:
-			printf("\n%sBuffer size exceeded. Dynamically memory allocation for responses vars under development."
-					" Pls, let me know <%s>.%s\n\n",C_HRED,PROGRAM_URL,C_DEFAULT);
+			printf("\n%sBuffer size exceeded. Pls, let me know <%s>.%s\n\n",C_HRED,PROGRAM_URL,C_DEFAULT);
 			break;
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
 			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.message,C_DEFAULT);
