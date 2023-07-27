@@ -49,7 +49,6 @@ void libGPT_flush_history(void){
 		if(temp->assistantMessage!=NULL) free(temp->assistantMessage);
 		free(temp);
 	}
-	historyContext=NULL;
 	contHistoryContext=0;
 }
 
