@@ -1,4 +1,4 @@
-#### v1.0.9:2023XXXX-Testing
+#### v1.0.9:20230727
 
 Others:
 - changed '--response-velocity' default value to 20000
