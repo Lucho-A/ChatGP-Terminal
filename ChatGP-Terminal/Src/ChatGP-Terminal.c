@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.0.9"
+#define PROGRAM_VERSION				"1.1.0"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -108,10 +108,10 @@ void signal_handler(int signalType){
 	}
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool createContext){
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
-	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message,createContext))!=RETURN_OK){
+	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
 		switch(resp){
 		case LIBGPT_ZEROBYTESRECV_ERROR:
 			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
 	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
-	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE, createContext=TRUE;
+	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--max-context-messages")==0){
 			maxContextMessages=strtod(argv[i+1],&tail);
-			if(maxContextMessages<=0 || *tail!='\0'){
+			if(maxContextMessages<0 || *tail!='\0'){
 				printf("\n%sMax. Context Messages value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
@@ -227,11 +227,6 @@ int main(int argc, char *argv[]) {
 			i--;
 			continue;
 		}
-		if(strcmp(argv[i],"--no-create-context")==0){
-			createContext=FALSE;
-			i--;
-			continue;
-		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -246,7 +241,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, FALSE);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
@@ -267,7 +262,7 @@ int main(int argc, char *argv[]) {
 			printf("\n");
 			continue;
 		}
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, createContext);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
 	printf("\n");

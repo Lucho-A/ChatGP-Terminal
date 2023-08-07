@@ -1,3 +1,11 @@
+#### v1.1.0:20230807
+
+Bug-Fixed:
+- fixed 'segmentation fault' when '--max-context-messages 1'
+
+Others:
+- removed option '--no-create-context'. You can obtain the same result setting '--max-context-messages 0'. 
+
 #### v1.0.9:20230727
 
 Others:

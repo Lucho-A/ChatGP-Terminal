@@ -69,7 +69,7 @@ typedef struct ChatGPTResponse{
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double, int);
-int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *, bool);
+int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 void libGPT_flush_history(void);
 int libGPT_clean(ChatGPT *);
 int libGPT_clean_response(ChatGPTResponse *);

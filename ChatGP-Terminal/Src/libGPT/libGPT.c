@@ -7,7 +7,7 @@
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
-*/
+ */
 
 #include "libGPT.h"
 
@@ -71,7 +71,6 @@ int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, 
 	if(systemRole==NULL) systemRole=LIBGPT_DEFAULT_ROLE;
 	if(maxTokens==0) maxTokens=LIBGPT_DEFAULT_MAX_TOKENS;
 	if(temperature==0) temperature=LIBGPT_DEFAULT_TEMPERATURE;
-	if(maxContextMessage==0) maxContextMessage=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
 	cgtp->api=malloc(strlen(api)+1);
 	if(cgtp->api ==NULL) return LIBGPT_INIT_ERROR;
 	snprintf(cgtp->api,strlen(api)+1,"%s",api);
@@ -93,7 +92,7 @@ int get_string_from_token(char *text, char *token, char *result, char endChar){
 	return RETURN_OK;
 }
 
-static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse, bool createContext){
+static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	char buffer[BUFFER_SIZE_16K]="";
 	if(strstr(cgptResponse->httpResponse,"\"error\": {")!=NULL){
 		if(get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
@@ -106,7 +105,7 @@ static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse,
 	cgptResponse->message=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->message,strlen(buffer)+1,"%s", buffer);
 
-	if(createContext){
+	if(maxHistoryContext>0){
 		Messages *newMessage=malloc(sizeof(Messages));
 		newMessage->userMessage=malloc(strlen(messageSent)+1);
 		snprintf(newMessage->userMessage,strlen(messageSent)+1,"%s",messageSent);
@@ -122,8 +121,12 @@ static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse,
 				historyContext=temp;
 			}
 			Messages *temp=historyContext;
-			while(temp->nextMessage!=NULL) temp=temp->nextMessage;
-			temp->nextMessage=newMessage;
+			if(temp!=NULL){
+				while(temp->nextMessage!=NULL) temp=temp->nextMessage;
+				temp->nextMessage=newMessage;
+			}else{
+				historyContext=newMessage;
+			}
 		}else{
 			historyContext=newMessage;
 		}
@@ -147,7 +150,7 @@ static int libGPT_parse_result(char *messageSent, ChatGPTResponse *cgptResponse,
 	return RETURN_OK;
 }
 
-int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message, bool createContext){
+int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message){
 	cgptResponse->httpResponse=NULL;
 	cgptResponse->message=NULL;
 	cgptResponse->finishReason=NULL;
@@ -307,5 +310,5 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message,
 	if(totalBytesReceived==0) return LIBGPT_ZEROBYTESRECV_ERROR;
 	cgptResponse->httpResponse=malloc(strlen(bufferHTTP)+1);
 	snprintf(cgptResponse->httpResponse,strlen(bufferHTTP)+1,"%s",bufferHTTP);
-	return libGPT_parse_result(messageParsed, cgptResponse, createContext);
+	return libGPT_parse_result(messageParsed, cgptResponse);
 }
