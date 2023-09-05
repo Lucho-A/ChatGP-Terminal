@@ -34,8 +34,9 @@ sudo apt-get install libssl3 libreadline8 libc6
 
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/5139e590-43c9-41b0-8426-c89bb7f7a397)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/a0a8b580-c62a-493f-87e6-0bf5b6e7a03a)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/83e2f0bc-8b67-4bcd-8e33-751b68eab8be)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/54f0a77f-e340-4fc4-a020-9793b5aebd0f)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/05c0ee11-609d-4ad4-a047-d705220f3db6)
+
 
 
