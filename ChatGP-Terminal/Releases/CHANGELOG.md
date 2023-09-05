@@ -1,3 +1,11 @@
+#### v1.1.1:20230905
+
+Feature:
+- option '--save-message-to' added. This option allows to specify a file (v.gr. '/home/user/chatgpt-messages.txt') in order to save the latest user & assistant message entering 'save;' into prompt. 
+
+Others:
+- code optimization, minor changes & code cleaned-up
+
 #### v1.1.0:20230807
 
 Bug-Fixed:

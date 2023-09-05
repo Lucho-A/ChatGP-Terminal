@@ -49,7 +49,9 @@ enum errors{
 	LIBGPT_RECEIVING_PACKETS_ERROR,
 	LIBGPT_RESPONSE_MESSAGE_ERROR,
 	LIBGPT_BUFFERSIZE_OVERFLOW,
-	LIBGPT_ZEROBYTESRECV_ERROR
+	LIBGPT_ZEROBYTESRECV_ERROR,
+	LIBGPT_OPENING_FILE_ERROR,
+	LIBGPT_NO_HISTORY_CONTEXT_ERROR
 };
 
 typedef struct ChatGPT{
@@ -70,7 +72,9 @@ typedef struct ChatGPTResponse{
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double, int);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
-void libGPT_flush_history(void);
+int libGPT_flush_history(void);
+int libGPT_save_message(char *);
+int libGPT_get_formatted_string(char *, char **);
 int libGPT_clean(ChatGPT *);
 int libGPT_clean_response(ChatGPTResponse *);
 

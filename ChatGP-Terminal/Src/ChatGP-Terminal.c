@@ -2,12 +2,12 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.0.9
+ Version     : 1.1.1
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
- */
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +21,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.0"
+#define PROGRAM_VERSION				"1.1.1"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -48,41 +48,21 @@ char * get_readline(char *prompt, bool addHistory){
 		free(lineRead);
 		lineRead=(char *)NULL;
 	}
-	lineRead = readline(prompt);
+	lineRead=readline(prompt);
 	if(lineRead && *lineRead && addHistory) add_history(lineRead);
 	return(lineRead);
 }
 
 void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
 	printf("%s\n",C_HWHITE);
-	for(int i=0;cgptResponse->message[i]!=0 && !cancel;i++){
-		usleep(rand()%responseVelocity + 20000);
-		if(cgptResponse->message[i]=='\\'){
-			switch(cgptResponse->message[i+1]){
-			case 'n':
-				printf("\n");
-				break;
-			case 'r':
-				printf("\r");
-				break;
-			case 't':
-				printf("\t");
-				break;
-			case '\\':
-				printf("\\");
-				break;
-			case '"':
-				printf("\"");
-				break;
-			default:
-				break;
-			}
-			i++;
-			continue;
-		}
-		printf("%c",cgptResponse->message[i]);
+	char *buffer=NULL;
+	libGPT_get_formatted_string(cgptResponse->message,&buffer);
+	for(int i=0;buffer[i]!=0 && !cancel;i++){
+		usleep(rand() % responseVelocity + 20000);
+		printf("%c",buffer[i]);
 		fflush(stdout);
 	}
+	free(buffer);
 	printf("%s\n",C_DEFAULT);
 	if(showFinishReason && !cancel) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
 	if(showFinishReason && cancel) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
@@ -141,7 +121,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
-	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL;
+	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL, *saveMessagesTo="";
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
 	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE;
@@ -203,6 +183,10 @@ int main(int argc, char *argv[]) {
 			}
 			continue;
 		}
+		if(strcmp(argv[i],"--save-messages-to")==0){
+			saveMessagesTo=argv[i+1];
+			continue;
+		}
 		if(strcmp(argv[i],"--message")==0){
 			message=argv[i+1];
 			continue;
@@ -255,6 +239,17 @@ int main(int argc, char *argv[]) {
 		if(strcmp(message,";")==0) break;
 		if(strcmp(message,"flush;")==0){
 			libGPT_flush_history();
+			printf("\n");
+			continue;
+		}
+		if(strcmp(message,"save;")==0){
+			if(strcmp(saveMessagesTo,"")==0){
+				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n\n",C_HRED,C_DEFAULT);
+				continue;
+			}
+			int resp=libGPT_save_message(saveMessagesTo);
+			if(resp==LIBGPT_OPENING_FILE_ERROR) printf("\n%sError opening file (%s): %s%s\n",C_HRED,saveMessagesTo, strerror(errno),C_DEFAULT);
+			if(resp==LIBGPT_NO_HISTORY_CONTEXT_ERROR) printf("\n%sNo message to save%s\n",C_HRED,C_DEFAULT);
 			printf("\n");
 			continue;
 		}

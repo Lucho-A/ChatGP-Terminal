@@ -41,7 +41,29 @@ static struct Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
 
-void libGPT_flush_history(void){
+int libGPT_save_message(char *saveMessagesTo){
+	time_t timestamp = time(NULL);
+	struct tm tm = *localtime(&timestamp);
+	char strTimeStamp[50]="";
+	snprintf(strTimeStamp,sizeof(strTimeStamp),"%d/%02d/%02d %02d:%02d:%02d UTC:%s",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_zone);
+	FILE *f=fopen(saveMessagesTo,"a");
+	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
+	if(historyContext==NULL) return LIBGPT_NO_HISTORY_CONTEXT_ERROR;
+	Messages *temp=historyContext;
+	while(temp->nextMessage!=NULL) temp=temp->nextMessage;
+	fprintf(f,"\n%s\n",strTimeStamp);
+	char *buffer=NULL;
+	libGPT_get_formatted_string(temp->userMessage,&buffer);
+	fprintf(f,"User: %s\n",buffer);
+	free(buffer);
+	libGPT_get_formatted_string(temp->assistantMessage,&buffer);
+	fprintf(f,"Assistant: %s\n",buffer);
+	free(buffer);
+	fclose(f);
+	return RETURN_OK;
+}
+
+int libGPT_flush_history(void){
 	while(historyContext!=NULL){
 		Messages *temp=historyContext;
 		historyContext=temp->nextMessage;
@@ -50,6 +72,7 @@ void libGPT_flush_history(void){
 		free(temp);
 	}
 	contHistoryContext=0;
+	return RETURN_OK;
 }
 
 int libGPT_clean(ChatGPT *cgpt){
@@ -80,6 +103,40 @@ int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, 
 	cgtp->maxTokens=maxTokens;
 	cgtp->temperature=temperature;
 	maxHistoryContext=maxContextMessage;
+	return RETURN_OK;
+}
+
+int libGPT_get_formatted_string(char *text, char **result){
+	*result=malloc(strlen(text)+1);
+	memset(*result,0,strlen(text)+1);
+	int cont=0;
+	for(int i=0;text[i]!=0;i++,cont++){
+		if(text[i]=='\\'){
+			switch(text[i+1]){
+			case 'n':
+				(*result)[cont]='\n';
+				break;
+			case 'r':
+				(*result)[cont]='\r';
+				break;
+			case 't':
+				(*result)[cont]='\t';
+				break;
+			case '\\':
+				(*result)[cont]='\\';
+				break;
+			case '"':
+				(*result)[cont]='\"';
+				break;
+			default:
+				break;
+			}
+			i++;
+			continue;
+		}
+		(*result)[cont]=text[i];
+	}
+	(*result)[cont]=0;
 	return RETURN_OK;
 }
 
@@ -222,7 +279,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	if (getaddrinfo(OPENAI_API_URL, NULL, &hints, &res)!=0) return LIBGPT_GETTING_HOST_INFO_ERROR;
+	if(getaddrinfo(OPENAI_API_URL, NULL, &hints, &res)!=0) return LIBGPT_GETTING_HOST_INFO_ERROR;
 	struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
 	void *addr = &(ipv4->sin_addr);
 	char chatGptIp[INET_ADDRSTRLEN];
