@@ -4,8 +4,17 @@
 </p>
 <ul>
   <li> Download: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
-  <li>Documentation (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
+  <li>Documentation only (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
 </ul>
+<p align=justify>
+If you want to installed it (recommended)¹:
+</p>
+
+```
+sudo apt-get install ./chatgp-terminal_x.x_x.deb
+```
+
+¹ this resolve dependencies and manual.
 <p>
   Have Fun!
 </p>
@@ -18,8 +27,7 @@
   <li>libespeak-ng.so.1</li>
 </ul>
 
-You can install them by executing:
-
+If you didn't installed it (deb), you can install the needed dependencies by executing:
 
 ```
 sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
@@ -31,12 +39,20 @@ sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
 ./chatgp-terminal --help
 ```
 
+### Examples:
+<ul>
+  <li> $ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --role "Act as IT Professional" --tts en
+  <li> $ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --save-message-to "/home/user/chatgpt-messages.csv" --csv-format
+  <li> $ ./chatgp-terminal --apikey "1234567890ABCD" --save-message-to "/home/user/chatgpt-messages.txt"
+</ul>
+
 ### Screenshots:
 
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/721de418-ebee-47f4-b64a-29df0d538de2)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/26dada07-15e9-4851-ac68-50546f73b490)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/2fde51d2-9cec-4e9c-b09d-d0a0c564a7e9)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/e2fd61d5-adb8-4ac9-b46b-44fb3e1fe6f8)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/e0ab7685-3d97-48b4-92a5-bfefdfb9bcc3)
+
 
 
