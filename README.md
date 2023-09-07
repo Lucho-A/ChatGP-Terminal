@@ -15,13 +15,14 @@
   <li>libssl.so.3</li>
   <li>libreadline.so.8</li>
   <li>libc.so.6</li>
+  <li>libespeak-ng.so.1</li>
 </ul>
 
 You can install them by executing:
 
 
 ```
-sudo apt-get install libssl3 libreadline8 libc6
+sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
 ```
 
 ### Usage:

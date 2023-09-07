@@ -7,7 +7,7 @@
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
- */
+*/
 
 #include "libGPT.h"
 
@@ -41,24 +41,30 @@ static struct Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
 
-int libGPT_save_message(char *saveMessagesTo){
+int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
 	time_t timestamp = time(NULL);
 	struct tm tm = *localtime(&timestamp);
-	char strTimeStamp[50]="";
-	snprintf(strTimeStamp,sizeof(strTimeStamp),"%d/%02d/%02d %02d:%02d:%02d UTC:%s",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_zone);
 	FILE *f=fopen(saveMessagesTo,"a");
 	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
 	if(historyContext==NULL) return LIBGPT_NO_HISTORY_CONTEXT_ERROR;
 	Messages *temp=historyContext;
 	while(temp->nextMessage!=NULL) temp=temp->nextMessage;
-	fprintf(f,"\n%s\n",strTimeStamp);
-	char *buffer=NULL;
-	libGPT_get_formatted_string(temp->userMessage,&buffer);
-	fprintf(f,"User: %s\n",buffer);
-	free(buffer);
-	libGPT_get_formatted_string(temp->assistantMessage,&buffer);
-	fprintf(f,"Assistant: %s\n",buffer);
-	free(buffer);
+	if(csvFormat){
+		fprintf(f,"\"%d/%02d/%02d\";\"%02d:%02d:%02d\";",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+		fprintf(f,"\"%s\";",temp->userMessage);
+		fprintf(f,"\"%s\"\n",temp->assistantMessage);
+	}else{
+		char strTimeStamp[50]="";
+		snprintf(strTimeStamp,sizeof(strTimeStamp),"%d/%02d/%02d %02d:%02d:%02d UTC:%s",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_zone);
+		fprintf(f,"\n%s\n",strTimeStamp);
+		char *buffer=NULL;
+		libGPT_get_formatted_string(temp->userMessage,&buffer);
+		fprintf(f,"User: %s\n",buffer);
+		free(buffer);
+		libGPT_get_formatted_string(temp->assistantMessage,&buffer);
+		fprintf(f,"Assistant: %s\n",buffer);
+		free(buffer);
+	}
 	fclose(f);
 	return RETURN_OK;
 }
@@ -277,11 +283,11 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	int socketConn=0;
 	struct addrinfo hints, *res;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_family=AF_INET;
+	hints.ai_socktype=SOCK_STREAM;
 	if(getaddrinfo(OPENAI_API_URL, NULL, &hints, &res)!=0) return LIBGPT_GETTING_HOST_INFO_ERROR;
-	struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
-	void *addr = &(ipv4->sin_addr);
+	struct sockaddr_in *ipv4=(struct sockaddr_in *)res->ai_addr;
+	void *addr=&(ipv4->sin_addr);
 	char chatGptIp[INET_ADDRSTRLEN];
 	inet_ntop(res->ai_family, addr, chatGptIp, sizeof(chatGptIp));
 	freeaddrinfo(res);
@@ -290,7 +296,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	serverAddress.sin_port=htons(OPENAI_API_PORT);
 	serverAddress.sin_addr.s_addr=inet_addr(chatGptIp);
 	if((socketConn=socket(AF_INET, SOCK_STREAM, 0))<0) return LIBGPT_SOCKET_CREATION_ERROR;
-	int socketFlags = fcntl(socketConn, F_GETFL, 0);
+	int socketFlags=fcntl(socketConn, F_GETFL, 0);
 	fcntl(socketConn, F_SETFL, socketFlags | O_NONBLOCK);
 	connect(socketConn, (struct sockaddr *) &serverAddress, sizeof(serverAddress));
 	fd_set rFdset, wFdset;

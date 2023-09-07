@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.1
+ Version     : 1.1.2
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -17,11 +17,13 @@
 #include <readline/history.h>
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
+#include <espeak-ng/speak_lib.h>
 
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.1"
+#define PROGRAM_VERSION				"1.1.2"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -42,7 +44,13 @@
 
 bool cancel=FALSE;
 
-char * get_readline(char *prompt, bool addHistory){
+int readline_input(FILE *stream) {
+	int c=fgetc(stream);
+	if (c==-1 || c==4) return 13;
+	return c;
+}
+
+char * readline_get(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
@@ -53,10 +61,27 @@ char * get_readline(char *prompt, bool addHistory){
 	return(lineRead);
 }
 
-void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
-	printf("%s\n",C_HWHITE);
+//int mySynthCallback(short *wav, int numsamples, espeak_EVENT *events) {
+//    printf("Number of samples: %d\n", numsamples);
+//    return 0;
+//}
+
+void *play_response(char *response){
+    espeak_SetVoiceByName("en+f3");
+    //espeak_SetSynthCallback(mySynthCallback);
+    espeak_Synth(response, strlen(response) + 1, 0, POS_CHARACTER, 0, espeakCHARS_AUTO, NULL, NULL);
+    espeak_Synchronize();
+	pthread_exit(NULL);
+}
+
+void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool tts){
 	char *buffer=NULL;
 	libGPT_get_formatted_string(cgptResponse->message,&buffer);
+	if(tts==TRUE){
+		pthread_t threadPlayMessage;
+		pthread_create(&threadPlayMessage, NULL, play_response, buffer);
+	}
+	printf("%s\n",C_HWHITE);
 	for(int i=0;buffer[i]!=0 && !cancel;i++){
 		usleep(rand() % responseVelocity + 20000);
 		printf("%c",buffer[i]);
@@ -69,7 +94,7 @@ void print_result(ChatGPTResponse *cgptResponse, long int responseVelocity, bool
 	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->promptTokens);
 	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->completionTokens);
 	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
-	printf("%s\n",C_DEFAULT);
+	printf("%s",C_DEFAULT);
 }
 
 void usage(char *programName){
@@ -78,17 +103,17 @@ void usage(char *programName){
 }
 
 void signal_handler(int signalType){
-	printf("\b\b  %s",C_DEFAULT);
 	switch(signalType){
 	case SIGINT:
 		cancel=TRUE;
+		if(espeak_IsPlaying()) espeak_Cancel();
 		break;
 	default:
 		break;
 	}
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool tts){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
@@ -114,7 +139,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			break;
 		}
 	}else{
-		print_result(&cgptResponse,responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
+		print_response(&cgptResponse,responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, tts);
 	}
 	libGPT_clean_response(&cgptResponse);
 }
@@ -124,7 +149,7 @@ int main(int argc, char *argv[]) {
 	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL, *saveMessagesTo="";
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
-	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE;
+	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -187,6 +212,10 @@ int main(int argc, char *argv[]) {
 			saveMessagesTo=argv[i+1];
 			continue;
 		}
+		if(strcmp(argv[i],"--csv-format")==0){
+			csv=TRUE;
+			continue;
+		}
 		if(strcmp(argv[i],"--message")==0){
 			message=argv[i+1];
 			continue;
@@ -211,6 +240,11 @@ int main(int argc, char *argv[]) {
 			i--;
 			continue;
 		}
+		if(strcmp(argv[i],"--tts")==0){
+			textToSpeech=TRUE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -225,21 +259,22 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, textToSpeech);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
+    espeak_Initialize(AUDIO_OUTPUT_PLAYBACK, 0, NULL, 0);
 	rl_initialize();
-	printf("\n");
+	rl_getc_function=readline_input;
 	do{
 		cancel=FALSE;
-		printf("%s",C_HCYAN);
-		char *message=get_readline(PROMPT, TRUE);
+		printf("%s\n",C_HCYAN);
+		char *message=readline_get(PROMPT, TRUE);
+		if(cancel==TRUE || strcmp(message,"")==0) continue;
 		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
 		if(strcmp(message,"flush;")==0){
 			libGPT_flush_history();
-			printf("\n");
 			continue;
 		}
 		if(strcmp(message,"save;")==0){
@@ -247,19 +282,15 @@ int main(int argc, char *argv[]) {
 				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n\n",C_HRED,C_DEFAULT);
 				continue;
 			}
-			int resp=libGPT_save_message(saveMessagesTo);
+			int resp=libGPT_save_message(saveMessagesTo, csv);
 			if(resp==LIBGPT_OPENING_FILE_ERROR) printf("\n%sError opening file (%s): %s%s\n",C_HRED,saveMessagesTo, strerror(errno),C_DEFAULT);
 			if(resp==LIBGPT_NO_HISTORY_CONTEXT_ERROR) printf("\n%sNo message to save%s\n",C_HRED,C_DEFAULT);
-			printf("\n");
 			continue;
 		}
-		if(strcmp(message,"")==0){
-			printf("\n");
-			continue;
-		}
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, textToSpeech);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
+    espeak_Terminate();
 	printf("\n");
 	exit(EXIT_SUCCESS);
 }
