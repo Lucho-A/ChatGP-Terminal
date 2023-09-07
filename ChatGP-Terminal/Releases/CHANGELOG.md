@@ -1,4 +1,4 @@
-#### v1.1.2:202309XX-Under development/Testing
+#### v1.1.2:20230907
 
 Features:
 - option '--tts' added. This option allows to speech the response in a selected language (can be cancelled with Crl+C). Dependency: libespeak-ng1. Usage: --tts [es|en|fr...]
