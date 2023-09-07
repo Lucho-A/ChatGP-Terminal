@@ -1,13 +1,14 @@
 #### v1.1.2:202309XX-Under development/Testing
 
 Features:
-- option '--tts' added. This option allows to speech the response (can be cancelled with Crl+C). Dependency: libespeak-ng1
+- option '--tts' added. This option allows to speech the response in a selected language (can be cancelled with Crl+C). Dependency: libespeak-ng1. Usage: --tts [es|en|fr...]
 - option '--csv-format' added. In order to allow generating a database of useful or particular responses (1), this option allows to save ('save;') records in delimited (';') format, in a file specified with '--save-messages-to'.
 
 Others:
-- minor changes & code cleaned-up
+- default velocity response default value change to 10000
+- code optimized, minor changes & code cleaned-up
 
-(1) Actually, I'm working on incorporate, in future releases, an 'import' option in order to allow populating the history at the start of the program. 
+(1) Actually, I'm working on incorporate, in a future release, an 'import' option in order to allow populating the history at the start of the program. 
 
 #### v1.1.1:20230905
 

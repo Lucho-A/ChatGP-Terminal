@@ -3,7 +3,7 @@
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
  Version     : 1.1.2
- Created on	 : 2023/07/18
+ Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
@@ -28,21 +28,18 @@
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
 #define C_HRED 						"\e[0;91m"
-#define C_RED 						"\e[0;31m"
-#define C_HGREEN 					"\e[0;92m"
 #define C_YELLOW 					"\e[0;33m"
 #define C_HCYAN 					"\e[0;96m"
-#define C_CYAN 						"\e[0;36m"
 #define C_HWHITE 					"\e[0;97m"
-#define C_WHITE 					"\e[0;37m"
 #define C_DEFAULT 					"\e[0m"
 
 #define PROMPT						";=exit) -> "
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
-#define	DEFAULT_RESPONSE_VELOCITY	20000
+#define	DEFAULT_RESPONSE_VELOCITY	10000
 
-bool cancel=FALSE;
+bool canceled=FALSE;
+bool speechFinished=TRUE;
 
 int readline_input(FILE *stream) {
 	int c=fgetc(stream);
@@ -50,7 +47,7 @@ int readline_input(FILE *stream) {
 	return c;
 }
 
-char * readline_get(char *prompt, bool addHistory){
+char *readline_get(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
@@ -61,36 +58,25 @@ char * readline_get(char *prompt, bool addHistory){
 	return(lineRead);
 }
 
-//int mySynthCallback(short *wav, int numsamples, espeak_EVENT *events) {
-//    printf("Number of samples: %d\n", numsamples);
-//    return 0;
-//}
-
-void *play_response(char *response){
-    espeak_SetVoiceByName("en+f3");
-    //espeak_SetSynthCallback(mySynthCallback);
-    espeak_Synth(response, strlen(response) + 1, 0, POS_CHARACTER, 0, espeakCHARS_AUTO, NULL, NULL);
+void *speech_response(void *args){
+    char* message=(char*)args;
+    speechFinished=FALSE;
+    espeak_Synth(message, strlen(message)+1, 0, POS_CHARACTER, 0, espeakCHARS_AUTO, NULL, NULL);
     espeak_Synchronize();
+    speechFinished=TRUE;
 	pthread_exit(NULL);
 }
 
-void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool tts){
-	char *buffer=NULL;
-	libGPT_get_formatted_string(cgptResponse->message,&buffer);
-	if(tts==TRUE){
-		pthread_t threadPlayMessage;
-		pthread_create(&threadPlayMessage, NULL, play_response, buffer);
-	}
+void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens){
 	printf("%s\n",C_HWHITE);
-	for(int i=0;buffer[i]!=0 && !cancel;i++){
+	for(int i=0;cgptResponse->contentFormatted[i]!=0 && !canceled;i++){
 		usleep(rand() % responseVelocity + 20000);
-		printf("%c",buffer[i]);
+		printf("%c",cgptResponse->contentFormatted[i]);
 		fflush(stdout);
 	}
-	free(buffer);
 	printf("%s\n",C_DEFAULT);
-	if(showFinishReason && !cancel) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
-	if(showFinishReason && cancel) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
+	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
+	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
 	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->promptTokens);
 	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->completionTokens);
 	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
@@ -105,8 +91,11 @@ void usage(char *programName){
 void signal_handler(int signalType){
 	switch(signalType){
 	case SIGINT:
-		cancel=TRUE;
-		if(espeak_IsPlaying()) espeak_Cancel();
+		canceled=TRUE;
+		if(espeak_IsPlaying()){
+			espeak_Cancel();
+			speechFinished=TRUE;
+		}
 		break;
 	default:
 		break;
@@ -119,27 +108,31 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
 		switch(resp){
 		case LIBGPT_ZEROBYTESRECV_ERROR:
-			printf("\n%sOps, zero bytes received. Try again...%s\n\n",C_HRED,C_DEFAULT);
+			printf("\n%sOps, zero bytes received. Try again...%s\n",C_HRED,C_DEFAULT);
 			break;
 		case LIBGPT_BUFFERSIZE_OVERFLOW:
-			printf("\n%sBuffer size exceeded. Pls, let me know <%s>.%s\n\n",C_HRED,PROGRAM_URL,C_DEFAULT);
+			printf("\n%sBuffer size exceeded. Pls, let me know <%s>.%s\n",C_HRED,PROGRAM_URL,C_DEFAULT);
 			break;
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
-			printf("\n%s%s%s\n\n",C_HRED,cgptResponse.message,C_DEFAULT);
+			printf("\n%s%s%s\n",C_HRED,cgptResponse.contentFormatted,C_DEFAULT);
 			break;
 		case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
 			printf("\n%sTime out. Try again...%s\n\n",C_HRED,C_DEFAULT);
 			break;
 		default:
-			if(cancel){
+			if(canceled){
 				printf("\n");
 				break;
 			}
-			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
+			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
 			break;
 		}
 	}else{
-		print_response(&cgptResponse,responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, tts);
+		if(tts==TRUE){
+			pthread_t threadPlayMessage;
+			pthread_create(&threadPlayMessage, NULL, speech_response, (void*)cgptResponse.contentFormatted);
+		}
+		print_response(&cgptResponse,responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens);
 	}
 	libGPT_clean_response(&cgptResponse);
 }
@@ -214,6 +207,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--csv-format")==0){
 			csv=TRUE;
+			i--;
 			continue;
 		}
 		if(strcmp(argv[i],"--message")==0){
@@ -241,8 +235,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--tts")==0){
-			textToSpeech=TRUE;
-			i--;
+		    (espeak_Initialize(AUDIO_OUTPUT_PLAYBACK, 0, NULL, 0)!=-1)?(textToSpeech=TRUE):(printf("%s\nEspeak initialization failed.%s\n",C_HRED,C_DEFAULT));
+		    char setVoice[64]="";
+		    snprintf(setVoice,64,"%s+f3",argv[i+1]);
+		    (espeak_SetVoiceByName(setVoice)==EE_OK)?(textToSpeech=TRUE):(printf("%s\nLanguage selected not found. Using default: en%s\n",C_HRED,C_DEFAULT));
 			continue;
 		}
 		if(strcmp(argv[i],"--help")==0){
@@ -261,16 +257,20 @@ int main(int argc, char *argv[]) {
 	if(message!=NULL){
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, textToSpeech);
 		libGPT_clean(&cgpt);
+		if(textToSpeech){
+			while(!speechFinished);
+			espeak_Terminate();
+		}
+		printf("\n");
 		exit(EXIT_SUCCESS);
 	}
-    espeak_Initialize(AUDIO_OUTPUT_PLAYBACK, 0, NULL, 0);
 	rl_initialize();
 	rl_getc_function=readline_input;
 	do{
-		cancel=FALSE;
+		canceled=FALSE;
 		printf("%s\n",C_HCYAN);
 		char *message=readline_get(PROMPT, TRUE);
-		if(cancel==TRUE || strcmp(message,"")==0) continue;
+		if(canceled==TRUE || strcmp(message,"")==0) continue;
 		printf("%s",C_DEFAULT);
 		if(strcmp(message,";")==0) break;
 		if(strcmp(message,"flush;")==0){
@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
 		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, textToSpeech);
 	}while(TRUE);
 	libGPT_clean(&cgpt);
-    espeak_Terminate();
+	if(textToSpeech) espeak_Terminate();
 	printf("\n");
 	exit(EXIT_SUCCESS);
 }
