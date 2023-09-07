@@ -27,7 +27,7 @@ sudo apt-get install ./chatgp-terminal_x.x_x.deb
   <li>libespeak-ng.so.1</li>
 </ul>
 
-If you didn't installed it (deb), you can install the needed dependencies by executing:
+If you didn't installed the package (deb), you can install the dependencies by executing:
 
 ```
 sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
