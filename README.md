@@ -7,7 +7,7 @@
   <li>Documentation only (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
 </ul>
 <p align=justify>
-If you want to installed it (recommended)¹:
+If you want to install it (recommended)¹:
 </p>
 
 ```
