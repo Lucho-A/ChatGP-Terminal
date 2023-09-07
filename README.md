@@ -33,11 +33,10 @@ sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
 
 ### Screenshots:
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/5139e590-43c9-41b0-8426-c89bb7f7a397)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/721de418-ebee-47f4-b64a-29df0d538de2)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/83e2f0bc-8b67-4bcd-8e33-751b68eab8be)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/26dada07-15e9-4851-ac68-50546f73b490)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/05c0ee11-609d-4ad4-a047-d705220f3db6)
-
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/e2fd61d5-adb8-4ac9-b46b-44fb3e1fe6f8)
 
 
