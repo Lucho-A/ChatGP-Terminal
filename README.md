@@ -15,7 +15,7 @@ If you want to install it (recommended)¹:
 sudo apt-get install ./chatgp-terminal_x.x_x.deb
 ```
 
-¹ this resolve dependencies and manual.
+¹ this resolve dependencies and man page.
 <p>
   Have Fun!
 </p>
