@@ -1,7 +1,9 @@
 #### v1.1.3:2023XXXX-Under Dev./Testing
 
 Features:
-- option '--session-file' added. If this option is specified, all the interactions user/assistant will be dumped (when the program is closed) and imported (at the start) to/from the file defined. The number of interactions dumped/imported (newest ones) will be defined by '--max-context-messages' (default 3). If '--message' option is included, this one won't has effect. Take into account the openai restrictions, and the costs involved.  
+- option '--session-file' added. If this option is specified, all the interactions user/assistant will be dumped (when the program is closed) and imported (at the start) to/from the file defined. The number of interactions dumped/imported (newest ones) will be defined by '--max-context-messages' (default 3). If '--message' option is included, this one won't has effect. Take into account the openai restrictions, and the costs involved.
+- option '--show-cost' added. Show the cost approx. associated to the response. Values up today (20230908). It seems to be very accuracy, however, always check against openai dashboard.
+- option '--log-file' added. In order to have information for evaluations, statistics, etc., I created this option for logging all the responses' information (except the user's and assistant's messages). Fields: creation_date, creation_time, finish_reason, prompt_tokens, completion_tokens, total_tokens, cost. Delimiter: '\t'.
 
 Bug-Fixed:
 - fixed some json miss-parsing from user's message.
