@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.h
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.2
+ Version     : 1.1.3
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Header file
@@ -18,7 +18,7 @@
 #define LIBGPT_NAME 						"libGPT"
 #define LIBGPT_MAJOR_VERSION				"1"
 #define LIBGPT_MINOR_VERSION				"1"
-#define LIBGPT_MICRO_VERSION				"2"
+#define LIBGPT_MICRO_VERSION				"3"
 #define LIBGPT_VERSION						PROGRAM_MAJOR_VERSION"."PROGRAM_MINOR_VERSION"."PROGRAM_MICRO_VERSION
 #define LIBGPT_DESCRIPTION					"C Library for ChatGPT"
 
@@ -62,6 +62,7 @@ typedef struct ChatGPT{
 }ChatGPT;
 
 typedef struct ChatGPTResponse{
+	long created;
 	char *httpResponse;
 	char *content;
 	char *contentFormatted;
@@ -69,11 +70,14 @@ typedef struct ChatGPTResponse{
 	unsigned int promptTokens;
 	unsigned int completionTokens;
 	unsigned int totalTokens;
+	double cost;
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, long int, double, int);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);
+int libGPT_import_session_file(char *);
+int libGPT_export_session_file(char *);
 int libGPT_save_message(char *, bool);
 int libGPT_clean(ChatGPT *);
 int libGPT_clean_response(ChatGPTResponse *);

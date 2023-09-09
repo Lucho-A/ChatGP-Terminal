@@ -2,12 +2,12 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.2
+ Version     : 1.1.3
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
-*/
+ */
 
 #include "libGPT.h"
 
@@ -37,7 +37,7 @@ typedef struct Messages{
 	struct Messages *nextMessage;
 }Messages;
 
-static struct Messages *historyContext=NULL;
+static Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
 
@@ -83,6 +83,34 @@ int get_string_from_token(char *text, char *token, char *result, char endChar){
 	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	return RETURN_OK;
 }
+void create_new_history_message(char *userMessage, char *assistantMessage){
+	Messages *newMessage=malloc(sizeof(Messages));
+	newMessage->userMessage=malloc(strlen(userMessage)+1);
+	snprintf(newMessage->userMessage,strlen(userMessage)+1,"%s",userMessage);
+	free(userMessage);
+	newMessage->assistantMessage=malloc(strlen(assistantMessage)+1);
+	snprintf(newMessage->assistantMessage,strlen(assistantMessage)+1,"%s",assistantMessage);
+	if(historyContext!=NULL){
+		if(contHistoryContext>=maxHistoryContext){
+			Messages *temp=historyContext->nextMessage;
+			if(historyContext->userMessage!=NULL) free(historyContext->userMessage);
+			if(historyContext->assistantMessage!=NULL) free(historyContext->assistantMessage);
+			free(historyContext);
+			historyContext=temp;
+		}
+		Messages *temp=historyContext;
+		if(temp!=NULL){
+			while(temp->nextMessage!=NULL) temp=temp->nextMessage;
+			temp->nextMessage=newMessage;
+		}else{
+			historyContext=newMessage;
+		}
+	}else{
+		historyContext=newMessage;
+	}
+	newMessage->nextMessage=NULL;
+	contHistoryContext++;
+}
 
 static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	char buffer[BUFFER_SIZE_16K]="";
@@ -95,40 +123,16 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 
+	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	cgptResponse->created=strtol(buffer,NULL,10);
+
 	if(get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->content=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
 	cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
 	format_string(buffer, &cgptResponse->contentFormatted);
 
-	if(maxHistoryContext>0){
-		Messages *newMessage=malloc(sizeof(Messages));
-		newMessage->userMessage=malloc(strlen(messageSent)+1);
-		snprintf(newMessage->userMessage,strlen(messageSent)+1,"%s",messageSent);
-		free(messageSent);
-		newMessage->assistantMessage=malloc(strlen(cgptResponse->content)+1);
-		snprintf(newMessage->assistantMessage,strlen(cgptResponse->content)+1,"%s",cgptResponse->content);
-		if(historyContext!=NULL){
-			if(contHistoryContext>=maxHistoryContext){
-				Messages *temp=historyContext->nextMessage;
-				if(historyContext->userMessage!=NULL) free(historyContext->userMessage);
-				if(historyContext->assistantMessage!=NULL) free(historyContext->assistantMessage);
-				free(historyContext);
-				historyContext=temp;
-			}
-			Messages *temp=historyContext;
-			if(temp!=NULL){
-				while(temp->nextMessage!=NULL) temp=temp->nextMessage;
-				temp->nextMessage=newMessage;
-			}else{
-				historyContext=newMessage;
-			}
-		}else{
-			historyContext=newMessage;
-		}
-		newMessage->nextMessage=NULL;
-		contHistoryContext++;
-	}
+	if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->content);
 
 	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
@@ -143,8 +147,54 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 
+	cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * 0.0015 + (cgptResponse->completionTokens/1000.0) * 0.002;
+
 	return RETURN_OK;
 }
+
+int libGPT_export_session_file(char *exportSessionFile){
+	FILE *f=fopen(exportSessionFile,"w");
+	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
+	Messages *temp=historyContext;
+	while(temp!=NULL){
+		fprintf(f,"%s\t%s\n",temp->userMessage,temp->assistantMessage);
+		temp=temp->nextMessage;
+	}
+	fclose(f);
+	free(temp);
+	return RETURN_OK;
+}
+
+int libGPT_import_session_file(char *importSessionFile){
+	FILE *f=fopen(importSessionFile,"r");
+	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
+	libGPT_flush_history();
+	size_t len=0, i=0, rows=0, initPos=0;
+	ssize_t chars=0;
+	char *line=NULL, *userMessage=NULL,*assistantMessage=NULL;
+	while((getline(&line, &len, f))!=-1) rows++;
+	if(rows>maxHistoryContext) initPos=rows-maxHistoryContext;
+	int contRows=0;
+	rewind(f);
+	while((chars=getline(&line, &len, f))!=-1){
+		if(contRows>=initPos){
+			userMessage=malloc(chars);
+			memset(userMessage,0,chars);
+			for(i=0;line[i]!='\t';i++) userMessage[i]=line[i];
+			int index=0;
+			assistantMessage=malloc(chars);
+			memset(assistantMessage,0,chars);
+			for(i++;line[i]!='\n';i++,index++) assistantMessage[index]=line[i];
+			create_new_history_message(userMessage, assistantMessage);
+		}
+		contRows++;
+	}
+	free(assistantMessage);
+	free(line);
+	fclose(f);
+	return RETURN_OK;
+}
+
 
 int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
 	time_t timestamp = time(NULL);
@@ -155,8 +205,8 @@ int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
 	Messages *temp=historyContext;
 	while(temp->nextMessage!=NULL) temp=temp->nextMessage;
 	if(csvFormat){
-		fprintf(f,"\"%d/%02d/%02d\";\"%02d:%02d:%02d\";",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-		fprintf(f,"\"%s\";",temp->userMessage);
+		fprintf(f,"\"%d/%02d/%02d\"\t\"%02d:%02d:%02d\"\t",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+		fprintf(f,"\"%s\"\t",temp->userMessage);
 		fprintf(f,"\"%s\"\n",temp->assistantMessage);
 	}else{
 		char strTimeStamp[50]="";
@@ -219,6 +269,7 @@ int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, 
 }
 
 int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message){
+	cgptResponse->created=0;
 	cgptResponse->httpResponse=NULL;
 	cgptResponse->content=NULL;
 	cgptResponse->contentFormatted=NULL;
@@ -226,6 +277,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	cgptResponse->promptTokens=0;
 	cgptResponse->completionTokens=0;
 	cgptResponse->totalTokens=0;
+	cgptResponse->cost=0.0;
 	char *messageParsed=malloc(strlen(message)*2);
 	memset(messageParsed,0,strlen(message)*2);
 	int cont=0;
@@ -239,6 +291,14 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 		case '\n':
 			messageParsed[cont]='\\';
 			messageParsed[++cont]='n';
+			break;
+		case '\t':
+			messageParsed[cont]='\\';
+			messageParsed[++cont]='t';
+			break;
+		case '\r':
+			messageParsed[cont]='\\';
+			messageParsed[++cont]='r';
 			break;
 		default:
 			messageParsed[cont]=message[i];
