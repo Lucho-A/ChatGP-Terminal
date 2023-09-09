@@ -197,11 +197,11 @@ int libGPT_import_session_file(char *importSessionFile){
 
 
 int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
-	time_t timestamp = time(NULL);
-	struct tm tm = *localtime(&timestamp);
+	if(historyContext==NULL) return LIBGPT_NO_HISTORY_CONTEXT_ERROR;
 	FILE *f=fopen(saveMessagesTo,"a");
 	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
-	if(historyContext==NULL) return LIBGPT_NO_HISTORY_CONTEXT_ERROR;
+	time_t timestamp = time(NULL);
+	struct tm tm = *localtime(&timestamp);
 	Messages *temp=historyContext;
 	while(temp->nextMessage!=NULL) temp=temp->nextMessage;
 	if(csvFormat){
