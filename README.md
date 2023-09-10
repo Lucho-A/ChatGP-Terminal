@@ -53,9 +53,9 @@ Into the man page you can find others.
 
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/721de418-ebee-47f4-b64a-29df0d538de2)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/2fde51d2-9cec-4e9c-b09d-d0a0c564a7e9)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/d053e91c-4e4e-4824-b2bd-f3649e3c1e5a)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/e0ab7685-3d97-48b4-92a5-bfefdfb9bcc3)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/95840753-d059-4ba2-b051-b64bb33f69e7)
 
-
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/0bf3b601-b7d1-44d7-879c-652b654a08d4)
 
