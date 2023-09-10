@@ -1,6 +1,6 @@
 # ChatGP-Terminal
 <p align=justify>
-  The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. At the moment, only model 'gpt-3.5-turbo' is supported. 
+The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. At the moment, only model 'gpt-3.5-turbo' is supported.
 </p>
 <ul>
   <li> Download: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
@@ -8,16 +8,15 @@
   <li> CHANGELOG/TODO: <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/CHANGELOG.md">here</a></li>
 </ul>
 <p align=justify>
-If you want to install it (recommended)¹:
+If you want to install it (recommended for resolving dependencies and man page):
 </p>
 
 ```
 sudo apt-get install ./chatgp-terminal_x.x_x.deb
 ```
 
-¹ this resolve dependencies and man page.
 <p>
-  Have Fun!
+Have Fun!
 </p>
 
 ### Dependencies:
@@ -37,15 +36,18 @@ sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
 ### Usage:
 
 ```
-./chatgp-terminal --help
+chatgp-terminal --help
 ```
 
 ### Examples:
-<ul>
-  <li> $ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --role "Act as IT Professional" --tts en
-  <li> $ ./chatgp-terminal --apikeyfile "/home/user/.cgpt_key.key" --save-message-to "/home/user/chatgpt-messages.csv" --csv-format
-  <li> $ ./chatgp-terminal --apikey "1234567890ABCD" --save-message-to "/home/user/chatgpt-messages.txt"
-</ul>
+
+I'm using this way right now, and works pretty smoothly:
+
+```
+chatgp-terminal --apikeyfile ~/.cgpt/.cgpt.key --max-context-messages 5 --max-tokens 1024 --role "Act as IT professional" --save-messages-to ~/.cgpt/cgpt.msg --session-file ~/.cgpt/cgpt.session --log-file ~/.cgpt/cgpt.log
+```
+
+Into the man page you can find others.
 
 ### Screenshots:
 

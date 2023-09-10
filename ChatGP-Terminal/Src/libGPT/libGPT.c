@@ -147,7 +147,7 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 
-	cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * 0.0015 + (cgptResponse->completionTokens/1000.0) * 0.002;
+	cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
 
 	return RETURN_OK;
 }

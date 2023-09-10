@@ -1,9 +1,13 @@
-#### v1.1.3:2023XXXX-Under Dev./Testing
+#### v1.1.3:20230909
+
+Hashes:
+- SHA2-256(chatgp-terminal_1.1_3.deb)= c6e3d5f78ec86d91fa2f5077bfffcafa0adaf11de6f6bcae5670f2246f81273f
+- SHA2-256(chatgp-terminal_1.1_3.tar.gz)= 240ca8e82df21b1b0bb1f5811be918f1d8642aceec5a0dee1d2f96e2331fab70
 
 Features:
-- option '--session-file' added. If this option is specified, all the interactions user/assistant will be dumped (when the program is closed) and imported (at the start) to/from the file defined. The number of interactions dumped/imported (newest ones) will be defined by '--max-context-messages' (default 3). If '--message' option is included, this one won't has effect. Take into account the openai restrictions, and the costs involved.
-- option '--show-cost' added. Show the cost approx. associated to the response. Values up today (20230908). It seems to be very accuracy, however, always check against openai dashboard.
-- option '--log-file' added. In order to have information for evaluations, statistics, etc., I created this option for logging all the responses' information (except the user's and assistant's messages). Fields: creation_date, creation_time, finish_reason, prompt_tokens, completion_tokens, total_tokens, cost. Delimiter: '\t'.
+- option '--session-file' added. If this option is specified, all the interactions user/assistant will be dumped (when the program is closed) and imported (at the start) to/from the file defined. The number of interactions dumped/imported (newest ones) will be defined by '--max-context-messages' (default 3). If '--message' option is included, this one won't has effect. Take into account the openai restrictions, and the costs involved. In this regard, if you exceed the maximum tokens allowed in a message (4k/16k tokens) you'll get a message form openai reporting the situation (as any other error message). If this situation arise, you must flush (flush;) (and lose) the history context in order to continue querying (or closing the program, manually editing the session file, and opening it again).
+- option '--show-cost' added. Show the cost approx. associated to the response. Values up today (20230909). It seems to be pretty accuracy, however, always check against openai dashboard.
+- option '--log-file' added. In order to have information for testing/evaluations, statistics, etc., I created this option for logging all the responses' information (except the user's and assistant's messages). Fields: creation_date, creation_time, finish_reason, prompt_tokens, completion_tokens, total_tokens, cost. Delimiter: '\t'.
 
 Bug-Fixed:
 - fixed some json miss-parsing from user's message.

@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--save-messages-to")==0){
-			FILE *f=fopen(argv[i+1],"w");
+			FILE *f=fopen(argv[i+1],"a");
 			if(f==NULL){
 				printf("\n%sError opening/creating save-messages file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
 				exit(EXIT_FAILURE);
