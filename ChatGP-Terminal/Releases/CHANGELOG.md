@@ -1,3 +1,30 @@
+#### v1.1.4:2023XXXX-Under Dev./Testing
+
+Hashes:
+- SHA2-256(chatgp-terminal_1.1_4.deb)=
+- SHA2-256(chatgp-terminal_1.1_4.tar.gz)=
+
+Features:
+- '--role-file': according to some tests I'm performing, I'm finding very useful incorporating contextual information into the 'system role', as long as I can give particular instructions, for example:
+
+```
+Act as IT professional, specialist in security, and tourist guide; and take the following into consideration:
+- When I chat about operating systems, prioritize Linux environment in your responses. I particular, Debian distro.
+- When I request for places to go out, take into account that I'm planning going to Paris in holidays.
+```
+
+So, I added this option in order to incorporate static/read-only contextual environment during the entire session, independent from the history context. Example usage: '--role-file ~/.cgpt/cgpt.role'. Finally, let's say that this information complements the one that you can include using '--role' option.In this regard, I'm evaluating the convenience, or not, to keep this option. Finally, I recommend not to use both and using this way.
+
+Bug-Fixed:
+- '--temperature': fixed upper boundary (2.0) validation.
+- '--tts': fixed validation when the option is not at the end of the command. Now, selecting a language is mandatory.
+
+Improvements:
+- For scripting reasons, among others, in order to allow the using of the output of '--message' to other commands ('grep', for example), '--response-velocity' and 'tts' options are not taking into account when this option is specified (no delay in responses, always FALSE, respectively). Finally, the output is uncolored.
+
+Others:
+- code optimized, minor changes & code cleaned-up
+
 #### v1.1.3:20230909
 
 Hashes:
