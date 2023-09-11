@@ -13,7 +13,9 @@ Act as IT professional, specialist in security, and tourist guide; and take the 
 - When I request for places to go out, take into account that I'm planning going to Paris in holidays.
 ```
 
-So, I added this option in order to incorporate static/read-only contextual environment during the entire session, independent from the history context. Example usage: '--role-file ~/.cgpt/cgpt.role'. Finally, let's say that this information complements the one that you can include using '--role' option.In this regard, I'm evaluating the convenience, or not, to keep this option. Finally, I recommend not to use both and using this way.
+So, I added this option in order to incorporate static/read-only contextual environment during the entire session, independent from the history context. In this regard, let's say that this information complements the one that you can include using '--role' option (I'm evaluating the convenience, or not, to keep this option). However, I recommend not to use both and using this way.
+
+Example usage: '--role-file ~/.cgpt/cgpt.role'.
 
 Bug-Fixed:
 - '--temperature': fixed upper boundary (2.0) validation.
