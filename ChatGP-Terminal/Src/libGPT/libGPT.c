@@ -384,7 +384,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"connection: close\r\n"
 			"content-length: %ld\r\n\r\n"
 			"%s",OPENAI_API_URL,cgpt.api,strlen(payload),payload);
-	printf("\n%s\n",payload);
+	//printf("\n%s\n",payload);
 	free(payload);
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
