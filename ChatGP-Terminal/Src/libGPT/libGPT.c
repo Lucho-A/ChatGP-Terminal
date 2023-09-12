@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.4
+ Version     : 1.1.5
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -28,7 +28,6 @@
 #define SOCKET_SEND_TIMEOUT_MS				5000
 #define SOCKET_RECV_TIMEOUT_MS				60000
 
-#define MAX_ROLES_SIZE						(1024*128)
 #define BUFFER_SIZE_16K						(1024*16)
 
 typedef struct Messages{
@@ -120,12 +119,15 @@ int format_string(char **stringTo, char *stringFrom){
 	return RETURN_OK;
 }
 
-int get_string_from_token(char *text, char *token, char *result, char endChar){
-	int cont=0;
+int get_string_from_token(char *text, char *token, char **result, char endChar){
+	ssize_t cont=0;
 	char *message=strstr(text,token);
-	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar) && cont<BUFFER_SIZE_16K;i++,cont++) result[cont]=message[i];
-	result[cont]='\0';
-	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++);
+	*result=malloc(cont);
+	memset(*result,0,cont);
+	cont=0;
+	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++) (*result)[cont]=message[i];
+	(*result)[cont]='\0';
 	return RETURN_OK;
 }
 
@@ -158,38 +160,45 @@ void create_new_history_message(char *userMessage, char *assistantMessage){
 }
 
 static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
-	char buffer[BUFFER_SIZE_16K]="";
+	char *buffer=NULL;
 	if(strstr(cgptResponse->httpResponse,"\"error\": {")!=NULL){
-		if(get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+		get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,&buffer,'\"');
 		cgptResponse->content=malloc(strlen(buffer)+1);
 		snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
 		cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
 		format_string(&cgptResponse->contentFormatted, buffer);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
-
-	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	free(buffer);
+	get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,'\n');
 	cgptResponse->created=strtol(buffer,NULL,10);
+	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"');
 	cgptResponse->content=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
 	cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
 	format_string(&cgptResponse->contentFormatted, buffer);
 	if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->content);
 	free(messageSent);
-	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	free(buffer);
+
+	get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"');
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
+	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,'\n');
 	cgptResponse->promptTokens=strtol(buffer,NULL,10);
+	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,'\n');
 	cgptResponse->completionTokens=strtol(buffer,NULL,10);
+	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",buffer,'\n')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
+	get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'\n');
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
+	free(buffer);
 
 	cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
 
@@ -282,6 +291,68 @@ int libGPT_flush_history(void){
 	return RETURN_OK;
 }
 
+char * libGPT_error(int error){
+	static char libGPTError[1024]="";
+	switch(error){
+	case LIBGPT_MALLOC_ERROR:
+		snprintf(libGPTError, 1024,"Malloc() libGPTError. ");
+		break;
+	case LIBGPT_GETTING_HOST_INFO_ERROR:
+		snprintf(libGPTError, 1024,"Error getting host info. ");
+		break;
+	case LIBGPT_SOCKET_CREATION_ERROR:
+		snprintf(libGPTError, 1024,"Error creating socket. ");
+		break;
+	case LIBGPT_SOCKET_CONNECTION_TIMEOUT_ERROR:
+		snprintf(libGPTError, 1024,"Socket connection time out. ");
+		break;
+	case LIBGPT_SSL_CONTEXT_ERROR:
+		snprintf(libGPTError, 1024,"Error creating SSL context. ");
+		break;
+	case LIBGPT_SSL_FD_ERROR:
+		snprintf(libGPTError, 1024,"SSL fd libGPTError. ");
+		break;
+	case LIBGPT_SSL_CONNECT_ERROR:
+		snprintf(libGPTError, 1024,"SSL Connection libGPTError. ");
+		break;
+	case LIBGPT_SOCKET_SEND_TIMEOUT_ERROR:
+		snprintf(libGPTError, 1024,"Sending packet time out. ");
+		break;
+	case LIBGPT_SENDING_PACKETS_ERROR:
+		snprintf(libGPTError, 1024,"Sending packet libGPTError. ");
+		break;
+	case LIBGPT_POLLIN_ERROR:
+		snprintf(libGPTError, 1024,"Pollin libGPTError. ");
+		break;
+	case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
+		snprintf(libGPTError, 1024,"Receiving packet time out. ");
+		break;
+	case LIBGPT_RECEIVING_PACKETS_ERROR:
+		snprintf(libGPTError, 1024,"Receiving packet libGPTError. ");
+		break;
+	case LIBGPT_RESPONSE_MESSAGE_ERROR:
+		snprintf(libGPTError, 1024,"Error message into JSON. ");
+		break;
+	case LIBGPT_BUFFERSIZE_OVERFLOW_ERROR:
+		snprintf(libGPTError, 1024,"Buffer overflow. Pls, let me know. ");
+		break;
+	case LIBGPT_ZEROBYTESRECV_ERROR:
+		snprintf(libGPTError, 1024,"Zero bytes received. Try again...");
+		break;
+	case LIBGPT_OPENING_FILE_ERROR:
+		snprintf(libGPTError, 1024,"Error opening file. %s", strerror(errno));
+		break;
+	case LIBGPT_NO_HISTORY_CONTEXT_ERROR:
+		snprintf(libGPTError, 1024,"No message to save. ");
+		break;
+	default:
+		snprintf(libGPTError, 1024,"Error not handled. ");
+		break;
+	}
+	if(libGPTError==NULL) return "";
+	return libGPTError;
+}
+
 int libGPT_clean(ChatGPT *cgpt){
 	if(cgpt->api!=NULL) free(cgpt->api);
 	if(cgpt->systemRole!=NULL && cgpt->systemRole[0]!=0) free(cgpt->systemRole);
@@ -302,11 +373,11 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 	if(maxTokens==0) maxTokens=LIBGPT_DEFAULT_MAX_TOKENS;
 	if(temperature==0) temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	cgpt->api=malloc(strlen(api)+1);
-	if(cgpt->api ==NULL) return LIBGPT_INIT_ERROR;
+	if(cgpt->api ==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(cgpt->api,strlen(api)+1,"%s",api);
 	if(roleFile!=NULL){
 		FILE *f=fopen(roleFile,"r");
-		if(f==NULL) return LIBGPT_INIT_ERROR;
+		if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
 		char *line=NULL;
 		size_t len=0,i=0;
 		ssize_t chars=0;
@@ -318,8 +389,8 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 			free(line);
 			line=NULL;
 		}
+		if(index>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW_ERROR;
 		parse_string(&cgpt->systemRole, buffer);
-		//printf("\n%s\n",cgpt->systemRole);
 		fclose(f);
 	}else{
 		if(systemRole!=NULL){
@@ -465,7 +536,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			if(bytesReceived>0){
 				totalBytesReceived+=bytesReceived;
 				for(int i=0; i<bytesReceived && cont < BUFFER_SIZE_16K; i++, contI++) bufferHTTP[contI]=buffer[i];
-				if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
+				if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW_ERROR;
 				continue;
 			}
 			if(bytesReceived==0){

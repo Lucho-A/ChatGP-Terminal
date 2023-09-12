@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.4
+ Version     : 1.1.5
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.4"
+#define PROGRAM_VERSION				"1.1.5"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -61,10 +61,9 @@ int log_response(ChatGPTResponse cgptResponse, char *logFile){
 	time_t timestamp = cgptResponse.created;
 	struct tm tm = *localtime(&timestamp);
 	FILE *f=fopen(logFile,"a");
-	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
+	if(f==NULL) return RETURN_ERROR;
 	fprintf(f,"\"%d/%02d/%02d\"\t\"%02d:%02d:%02d\"\t",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	fprintf(f,"%s\t%d\t%d\t%d\t%.6f\n",cgptResponse.finishReason, cgptResponse.promptTokens, cgptResponse.completionTokens,
-			cgptResponse.totalTokens,cgptResponse.cost);
+	fprintf(f,"%s\t%d\t%d\t%d\t%.6f\n",cgptResponse.finishReason, cgptResponse.promptTokens, cgptResponse.completionTokens,cgptResponse.totalTokens,cgptResponse.cost);
 	fclose(f);
 	return RETURN_OK;
 }
@@ -120,24 +119,15 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
 		switch(resp){
-		case LIBGPT_ZEROBYTESRECV_ERROR:
-			printf("\n%sOps, zero bytes received. Try again...%s\n",C_HRED,C_DEFAULT);
-			break;
-		case LIBGPT_BUFFERSIZE_OVERFLOW:
-			printf("\n%sBuffer size exceeded. Pls, let me know <%s>.%s\n",C_HRED,PROGRAM_URL,C_DEFAULT);
-			break;
 		case LIBGPT_RESPONSE_MESSAGE_ERROR:
 			printf("\n%s%s%s\n",C_HRED,cgptResponse.contentFormatted,C_DEFAULT);
-			break;
-		case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
-			printf("\n%sTime out. Try again...%s\n\n",C_HRED,C_DEFAULT);
 			break;
 		default:
 			if(canceled){
 				printf("\n");
 				break;
 			}
-			printf("\n%sDEBUG: Return error: %d. Errno: %d (%s).%s\n",C_HRED,resp, errno,strerror(errno),C_DEFAULT);
+			printf("\n%s%s%s\n",C_HRED, libGPT_error(resp),C_DEFAULT);
 			break;
 		}
 	}else{
@@ -145,11 +135,9 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			pthread_t threadSpeechMessage;
 			pthread_create(&threadSpeechMessage, NULL, speech_response, (void*)cgptResponse.contentFormatted);
 		}
-		print_response(&cgptResponse, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens,
-				showTotalTokens, showCost);
+		print_response(&cgptResponse, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens,showTotalTokens,showCost);
 		if(logFile!=NULL){
-			if(log_response(cgptResponse, logFile)==LIBGPT_OPENING_FILE_ERROR)
-				printf("\n%sError opening log file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);;
+			if(log_response(cgptResponse, logFile)!=RETURN_OK) printf("\n%sError logging file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);;
 		}
 	}
 	libGPT_clean_response(&cgptResponse);
@@ -319,12 +307,13 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	ChatGPT cgpt;
-	if(libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, temperature, maxContextMessages)==LIBGPT_INIT_ERROR){
-		printf("\n%sError init structure. %s%s\n\n",C_HRED,strerror(errno),C_DEFAULT);
+	int resp=0;
+	if((resp=libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, temperature, maxContextMessages))!=RETURN_OK){
+		printf("\n%sError init structure. %s%s\n\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
 	if(sessionFile!=NULL){
-		if(libGPT_import_session_file(sessionFile)!=RETURN_OK) printf("\n%sError importing session file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
+		if((resp=libGPT_import_session_file(sessionFile))!=RETURN_OK) printf("\n%sError importing session file. %s%s\n\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 	}
 	if(message!=NULL){
 		send_chat(cgpt, message, 0, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, FALSE, logFile);
@@ -345,20 +334,17 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(message,"save;")==0){
-			if(saveMessagesTo==NULL){
-				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n\n",C_HRED,C_DEFAULT);
+			if(saveMessagesTo==NULL || saveMessagesTo[0]==0){
+				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
 				continue;
 			}
-			int resp=libGPT_save_message(saveMessagesTo, csv);
-			if(resp==LIBGPT_OPENING_FILE_ERROR) printf("\n%sError opening file (%s): %s%s\n",C_HRED,saveMessagesTo, strerror(errno),C_DEFAULT);
-			if(resp==LIBGPT_NO_HISTORY_CONTEXT_ERROR) printf("\n%sNo message to save%s\n",C_HRED,C_DEFAULT);
+			if((resp=libGPT_save_message(saveMessagesTo, csv))!=RETURN_OK) printf("\n%sError saving file: %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 			continue;
 		}
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens,
-				showTotalTokens, showCost, textToSpeech,logFile);
+		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile);
 	}while(TRUE);
 	if(sessionFile!=NULL){
-		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) printf("\n%sError dumping session. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
+		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) printf("\n%sError dumping session. %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 	}
 	if(textToSpeech) espeak_Terminate();
 	libGPT_clean(&cgpt);
