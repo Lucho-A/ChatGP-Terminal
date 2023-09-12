@@ -19,7 +19,7 @@ Example usage: '--role-file ~/.cgpt/cgpt.role'.
 
 Bug-Fixed:
 - '--temperature': fixed upper boundary (2.0) validation.
-- '--tts': fixed validation when the option is not at the end of the command. Now, selecting a language is mandatory.
+- '--tts': fixed validation when the option is not placed at the end of the command. Now, selecting a language is mandatory.
 
 Improvements:
 - For scripting reasons, among others, in order to allow the using of the output of '--message' to other commands ('grep', for example), '--response-velocity' and 'tts' options are not taking into account when this option is specified (no delay in responses, always FALSE, respectively). Finally, the output is uncolored.

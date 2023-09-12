@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.3
+ Version     : 1.1.4
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -41,27 +41,72 @@ static Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
 
-int format_string(char *text, char **result){
-	*result=malloc(strlen(text)+1);
-	memset(*result,0,strlen(text)+1);
+int parse_string(char **stringTo, char *stringFrom){
+	int cont=0, contEsc=0;
+	for(int i=0;i<strlen(stringFrom);i++){
+		switch(stringFrom[i]){
+		case '\"':
+		case '\\':
+		case '\n':
+		case '\t':
+		case '\r':
+			contEsc++;
+			break;
+		default:
+			break;
+		}
+	}
+	*stringTo=malloc(strlen(stringFrom)+contEsc+1);
+	memset(*stringTo,0,strlen(stringFrom)+contEsc+1);
+	for(int i=0;i<strlen(stringFrom);i++,cont++){
+		switch(stringFrom[i]){
+		case '\"':
+		case '\\':
+			(*stringTo)[cont]='\\';
+			(*stringTo)[++cont]=stringFrom[i];
+			break;
+		case '\n':
+			(*stringTo)[cont]='\\';
+			(*stringTo)[++cont]='n';
+			break;
+		case '\t':
+			(*stringTo)[cont]='\\';
+			(*stringTo)[++cont]='t';
+			break;
+		case '\r':
+			(*stringTo)[cont]='\\';
+			(*stringTo)[++cont]='r';
+			break;
+		default:
+			(*stringTo)[cont]=stringFrom[i];
+			break;
+		}
+	}
+	(*stringTo)[cont]='\0';
+	return RETURN_OK;
+}
+
+int format_string(char **stringTo, char *stringFrom){
+	*stringTo=malloc(strlen(stringFrom)+1);
+	memset(*stringTo,0,strlen(stringFrom)+1);
 	int cont=0;
-	for(int i=0;text[i]!=0;i++,cont++){
-		if(text[i]=='\\'){
-			switch(text[i+1]){
+	for(int i=0;stringFrom[i]!=0;i++,cont++){
+		if(stringFrom[i]=='\\'){
+			switch(stringFrom[i+1]){
 			case 'n':
-				(*result)[cont]='\n';
+				(*stringTo)[cont]='\n';
 				break;
 			case 'r':
-				(*result)[cont]='\r';
+				(*stringTo)[cont]='\r';
 				break;
 			case 't':
-				(*result)[cont]='\t';
+				(*stringTo)[cont]='\t';
 				break;
 			case '\\':
-				(*result)[cont]='\\';
+				(*stringTo)[cont]='\\';
 				break;
 			case '"':
-				(*result)[cont]='\"';
+				(*stringTo)[cont]='\"';
 				break;
 			default:
 				break;
@@ -69,9 +114,9 @@ int format_string(char *text, char **result){
 			i++;
 			continue;
 		}
-		(*result)[cont]=text[i];
+		(*stringTo)[cont]=stringFrom[i];
 	}
-	(*result)[cont]=0;
+	(*stringTo)[cont]=0;
 	return RETURN_OK;
 }
 
@@ -83,11 +128,11 @@ int get_string_from_token(char *text, char *token, char *result, char endChar){
 	if(cont>=BUFFER_SIZE_16K) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	return RETURN_OK;
 }
+
 void create_new_history_message(char *userMessage, char *assistantMessage){
 	Messages *newMessage=malloc(sizeof(Messages));
 	newMessage->userMessage=malloc(strlen(userMessage)+1);
 	snprintf(newMessage->userMessage,strlen(userMessage)+1,"%s",userMessage);
-	free(userMessage);
 	newMessage->assistantMessage=malloc(strlen(assistantMessage)+1);
 	snprintf(newMessage->assistantMessage,strlen(assistantMessage)+1,"%s",assistantMessage);
 	if(historyContext!=NULL){
@@ -119,7 +164,7 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		cgptResponse->content=malloc(strlen(buffer)+1);
 		snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
 		cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
-		format_string(buffer, &cgptResponse->contentFormatted);
+		format_string(&cgptResponse->contentFormatted, buffer);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 
@@ -130,10 +175,9 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	cgptResponse->content=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
 	cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
-	format_string(buffer, &cgptResponse->contentFormatted);
-
+	format_string(&cgptResponse->contentFormatted, buffer);
 	if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->content);
-
+	free(messageSent);
 	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",buffer,'\"')==LIBGPT_BUFFERSIZE_OVERFLOW) return LIBGPT_BUFFERSIZE_OVERFLOW;
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
 	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
@@ -165,8 +209,8 @@ int libGPT_export_session_file(char *exportSessionFile){
 	return RETURN_OK;
 }
 
-int libGPT_import_session_file(char *importSessionFile){
-	FILE *f=fopen(importSessionFile,"r");
+int libGPT_import_session_file(char *sessionFile){
+	FILE *f=fopen(sessionFile,"r");
 	if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
 	libGPT_flush_history();
 	size_t len=0, i=0, rows=0, initPos=0;
@@ -186,11 +230,13 @@ int libGPT_import_session_file(char *importSessionFile){
 			memset(assistantMessage,0,chars);
 			for(i++;line[i]!='\n';i++,index++) assistantMessage[index]=line[i];
 			create_new_history_message(userMessage, assistantMessage);
+			free(userMessage);
+			free(assistantMessage);
+			free(line);
+			line=NULL;
 		}
 		contRows++;
 	}
-	free(assistantMessage);
-	free(line);
 	fclose(f);
 	return RETURN_OK;
 }
@@ -213,10 +259,10 @@ int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
 		snprintf(strTimeStamp,sizeof(strTimeStamp),"%d/%02d/%02d %02d:%02d:%02d UTC:%s",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_zone);
 		fprintf(f,"\n%s\n",strTimeStamp);
 		char *buffer=NULL;
-		format_string(temp->userMessage,&buffer);
+		format_string(&buffer,temp->userMessage);
 		fprintf(f,"User: %s\n",buffer);
 		free(buffer);
-		format_string(temp->assistantMessage,&buffer);
+		format_string(&buffer,temp->assistantMessage);
 		fprintf(f,"Assistant: %s\n",buffer);
 		free(buffer);
 	}
@@ -238,7 +284,7 @@ int libGPT_flush_history(void){
 
 int libGPT_clean(ChatGPT *cgpt){
 	if(cgpt->api!=NULL) free(cgpt->api);
-	if(cgpt->systemRole!=NULL) free(cgpt->systemRole);
+	if(cgpt->systemRole!=NULL && cgpt->systemRole[0]!=0) free(cgpt->systemRole);
 	libGPT_flush_history();
 	return RETURN_OK;
 }
@@ -251,19 +297,41 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 	return RETURN_OK;
 }
 
-int libGPT_init(ChatGPT *cgtp, char *api, char *systemRole, long int maxTokens, double temperature, int maxContextMessage){
+int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long int maxTokens, double temperature, int maxContextMessage){
 	SSL_library_init();
-	if(systemRole==NULL) systemRole=LIBGPT_DEFAULT_ROLE;
 	if(maxTokens==0) maxTokens=LIBGPT_DEFAULT_MAX_TOKENS;
 	if(temperature==0) temperature=LIBGPT_DEFAULT_TEMPERATURE;
-	cgtp->api=malloc(strlen(api)+1);
-	if(cgtp->api ==NULL) return LIBGPT_INIT_ERROR;
-	snprintf(cgtp->api,strlen(api)+1,"%s",api);
-	cgtp->systemRole=malloc(strlen(systemRole)+1);
-	if(cgtp->systemRole ==NULL) return LIBGPT_INIT_ERROR;
-	snprintf(cgtp->systemRole,strlen(systemRole)+1,"%s",systemRole);
-	cgtp->maxTokens=maxTokens;
-	cgtp->temperature=temperature;
+	cgpt->api=malloc(strlen(api)+1);
+	if(cgpt->api ==NULL) return LIBGPT_INIT_ERROR;
+	snprintf(cgpt->api,strlen(api)+1,"%s",api);
+	if(roleFile!=NULL){
+		FILE *f=fopen(roleFile,"r");
+		if(f==NULL) return LIBGPT_INIT_ERROR;
+		char *line=NULL;
+		size_t len=0,i=0;
+		ssize_t chars=0;
+		char buffer[BUFFER_SIZE_16K]="";
+		if(systemRole!=NULL) snprintf(buffer,strlen(systemRole)+3,"%s. ",systemRole);
+		ssize_t index=strlen(buffer);
+		while((chars=getline(&line, &len, f))!=-1){
+			for(i=0;i<strlen(line);i++,index++) buffer[index]=line[i];
+			free(line);
+			line=NULL;
+		}
+		parse_string(&cgpt->systemRole, buffer);
+		printf("\n%s\n",cgpt->systemRole);
+		fclose(f);
+	}else{
+		if(systemRole!=NULL){
+			cgpt->systemRole=malloc(strlen(systemRole)+2);
+			if(cgpt->systemRole ==NULL) return LIBGPT_INIT_ERROR;
+			snprintf(cgpt->systemRole,strlen(systemRole)+2,"%s.",systemRole);
+		}else{
+			cgpt->systemRole="";
+		}
+	}
+	cgpt->maxTokens=maxTokens;
+	cgpt->temperature=temperature;
 	maxHistoryContext=maxContextMessage;
 	return RETURN_OK;
 }
@@ -278,34 +346,9 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	cgptResponse->completionTokens=0;
 	cgptResponse->totalTokens=0;
 	cgptResponse->cost=0.0;
-	char *messageParsed=malloc(strlen(message)*2);
-	memset(messageParsed,0,strlen(message)*2);
-	int cont=0;
-	for(int i=0;i<strlen(message);i++,cont++){
-		switch(message[i]){
-		case '\"':
-		case '\\':
-			messageParsed[cont]='\\';
-			messageParsed[++cont]=message[i];
-			break;
-		case '\n':
-			messageParsed[cont]='\\';
-			messageParsed[++cont]='n';
-			break;
-		case '\t':
-			messageParsed[cont]='\\';
-			messageParsed[++cont]='t';
-			break;
-		case '\r':
-			messageParsed[cont]='\\';
-			messageParsed[++cont]='r';
-			break;
-		default:
-			messageParsed[cont]=message[i];
-		}
-	}
-	messageParsed[cont]='\0';
-	char roles[MAX_ROLES_SIZE]="", buf[BUFFER_SIZE_16K]="";
+	char *messageParsed=NULL;
+	parse_string(&messageParsed, message);
+	char roles[BUFFER_SIZE_16K]="", buf[BUFFER_SIZE_16K]="";
 	Messages *temp=historyContext;
 	while(temp!=NULL){
 		snprintf(buf,BUFFER_SIZE_16K,"{\"role\":\"user\",\"content\":\"%s\"},",temp->userMessage);
@@ -316,9 +359,9 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	}
 	snprintf(buf,BUFFER_SIZE_16K,"{\"role\":\"user\",\"content\":\"%s\"}",messageParsed);
 	strcat(roles,buf);
-	char *payload=malloc(strlen(roles)+512);
-	memset(payload,0,strlen(roles)+512);
-	snprintf(payload,strlen(roles)+512,
+	char *payload=malloc(strlen(cgpt.systemRole)+strlen(roles)+512);
+	memset(payload,0,strlen(cgpt.systemRole)+strlen(roles)+512);
+	snprintf(payload,strlen(cgpt.systemRole)+strlen(roles)+512,
 			"{"
 			"\"model\":\"gpt-3.5-turbo\","
 			"\"messages\":"
@@ -341,6 +384,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"connection: close\r\n"
 			"content-length: %ld\r\n\r\n"
 			"%s",OPENAI_API_URL,cgpt.api,strlen(payload),payload);
+	printf("\n%s\n",payload);
 	free(payload);
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
@@ -408,6 +452,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	int bytesReceived=0,contI=0, totalBytesReceived=0;
 	pfds[0].events=POLLIN;
 	char buffer[BUFFER_SIZE_16K]="", bufferHTTP[BUFFER_SIZE_16K]="";
+	size_t cont=0;
 	do{
 		numEvents=poll(pfds, 1, SOCKET_RECV_TIMEOUT_MS);
 		if(numEvents==0){

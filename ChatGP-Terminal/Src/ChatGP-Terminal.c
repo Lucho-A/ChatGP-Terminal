@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.3
+ Version     : 1.1.4
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.3"
+#define PROGRAM_VERSION				"1.1.4"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -39,15 +39,14 @@
 #define	DEFAULT_RESPONSE_VELOCITY	10000
 
 bool canceled=FALSE;
-bool speechFinished=TRUE;
 
 int readline_input(FILE *stream) {
 	int c=fgetc(stream);
-	if (c==-1 || c==4) return 13;
+	if(c==-1 || c==4) return 13;
 	return c;
 }
 
-char *readline_get(char *prompt, bool addHistory){
+static char *readline_get(char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
@@ -72,29 +71,31 @@ int log_response(ChatGPTResponse cgptResponse, char *logFile){
 
 void *speech_response(void *args){
 	char* message=(char*)args;
-	speechFinished=FALSE;
 	espeak_Synth(message, strlen(message)+1, 0, POS_CHARACTER, 0, espeakCHARS_AUTO, NULL, NULL);
 	espeak_Synchronize();
-	speechFinished=TRUE;
 	pthread_exit(NULL);
 }
 
 void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens,
 		bool showCompletionTokens, bool showTotalTokens, bool showCost){
-	printf("%s\n",C_HWHITE);
-	for(int i=0;cgptResponse->contentFormatted[i]!=0 && !canceled;i++){
-		usleep(rand() % responseVelocity + 20000);
-		printf("%c",cgptResponse->contentFormatted[i]);
-		fflush(stdout);
+	char *defColor=(responseVelocity==0)?"":C_DEFAULT, *respColor=(responseVelocity==0)?"":C_YELLOW;
+	if(responseVelocity==0){
+		printf("%s",cgptResponse->contentFormatted);
+	}else{
+		printf("%s\n",C_HWHITE);
+		for(int i=0;cgptResponse->contentFormatted[i]!=0 && !canceled;i++){
+			usleep(rand() % responseVelocity + 20000);
+			printf("%c",cgptResponse->contentFormatted[i]);
+			fflush(stdout);
+		}
 	}
-	printf("%s\n",C_DEFAULT);
-	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",C_DEFAULT,C_YELLOW,cgptResponse->finishReason);
-	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",C_DEFAULT,C_YELLOW);
-	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->promptTokens);
-	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->completionTokens);
-	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",C_DEFAULT,C_YELLOW, cgptResponse->totalTokens);
-	if(showCost) printf("%s\nCost approx.: %s%.6f\n",C_DEFAULT,C_YELLOW, cgptResponse->cost);
-	printf("%s",C_DEFAULT);
+	printf("\n");
+	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",defColor,respColor,cgptResponse->finishReason);
+	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",defColor,respColor);
+	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",defColor,respColor, cgptResponse->promptTokens);
+	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",defColor,respColor, cgptResponse->completionTokens);
+	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",defColor,respColor, cgptResponse->totalTokens);
+	if(showCost) printf("%s\nCost approx.: %s%.6f\n",defColor,respColor, cgptResponse->cost);
 }
 
 void usage(char *programName){
@@ -106,10 +107,7 @@ void signal_handler(int signalType){
 	switch(signalType){
 	case SIGINT:
 		canceled=TRUE;
-		if(espeak_IsPlaying()){
-			espeak_Cancel();
-			speechFinished=TRUE;
-		}
+		if(espeak_IsPlaying()) espeak_Cancel();
 		break;
 	default:
 		break;
@@ -159,7 +157,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
-	char *apikey="", *role=LIBGPT_DEFAULT_ROLE, *message=NULL, *saveMessagesTo="", *sessionFile=NULL, *logFile=NULL;
+	char *apikey="", *role=NULL, *message=NULL, *saveMessagesTo="", *sessionFile=NULL, *roleFile=NULL, *logFile=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
 	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE, showCost=FALSE;
@@ -199,7 +197,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--temperature")==0){
 			temperature=strtod(argv[i+1],&tail);
-			if(temperature<=0.0 || *tail!='\0'){
+			if(temperature<=0.0 || temperature>2.0 || *tail!='\0'){
 				printf("\n%sTemperature value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
@@ -229,6 +227,16 @@ int main(int argc, char *argv[]) {
 			}
 			fclose(f);
 			sessionFile=argv[i+1];
+			continue;
+		}
+		if(strcmp(argv[i],"--role-file")==0){
+			FILE *f=fopen(argv[i+1],"r");
+			if(f==NULL){
+				printf("\n%sError opening role file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			fclose(f);
+			roleFile=argv[i+1];
 			continue;
 		}
 		if(strcmp(argv[i],"--log-file")==0){
@@ -290,9 +298,15 @@ int main(int argc, char *argv[]) {
 				textToSpeech=TRUE;
 				char setVoice[64]="";
 				snprintf(setVoice,64,"%s+f3",argv[i+1]);
-				(espeak_SetVoiceByName(setVoice)==EE_OK)?(textToSpeech=TRUE):(printf("%s\nLanguage selected not found. Using default: en%s\n",C_HRED,C_DEFAULT));
+				if(espeak_SetVoiceByName(setVoice)==EE_OK){
+					textToSpeech=TRUE;
+				}else{
+					printf("%s\nTTS language selection not valid. %s\n\n",C_HRED,C_DEFAULT);
+					exit(EXIT_FAILURE);
+				}
 			}else{
 				printf("%s\nEspeak initialization failed.%s\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
@@ -305,26 +319,20 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	ChatGPT cgpt;
-	if(libGPT_init(&cgpt, apikey, role, maxTokens, temperature, maxContextMessages)==LIBGPT_INIT_ERROR){
+	if(libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, temperature, maxContextMessages)==LIBGPT_INIT_ERROR){
 		printf("\n%sError init structure. %s%s\n\n",C_HRED,strerror(errno),C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
+	if(sessionFile!=NULL){
+		if(libGPT_import_session_file(sessionFile)!=RETURN_OK) printf("\n%sError importing session file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
+	}
 	if(message!=NULL){
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens,
-				showTotalTokens, showCost, textToSpeech, logFile);
+		send_chat(cgpt, message, 0, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, FALSE, logFile);
 		libGPT_clean(&cgpt);
-		if(textToSpeech){
-			while(!speechFinished);
-			espeak_Terminate();
-		}
-		printf("\n");
 		exit(EXIT_SUCCESS);
 	}
 	rl_initialize();
 	rl_getc_function=readline_input;
-	if(sessionFile!=NULL){
-		if(libGPT_import_session_file(sessionFile)!=RETURN_OK) printf("\n%sError importing session. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
-	}
 	do{
 		canceled=FALSE;
 		printf("%s\n",C_HCYAN);
