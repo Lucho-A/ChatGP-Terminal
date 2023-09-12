@@ -1,8 +1,8 @@
-#### v1.1.4:2023XXXX-Under Dev./Testing
+#### v1.1.4:20230912
 
 Hashes:
-- SHA2-256(chatgp-terminal_1.1_4.deb)=
-- SHA2-256(chatgp-terminal_1.1_4.tar.gz)=
+- SHA2-256(chatgp-terminal_1.1_4.deb)=f0f6bdc65a3ef4345acf21b1e24ea3a338e4a6c52bd24428bba694a2f996fc5e
+- SHA2-256(chatgp-terminal_1.1_4.tar.gz)=d1013841ef23b9b2a6e3591fe73b94ab8ea47a43ab6db186d3347c70a69f24fe
 
 Features:
 - '--role-file': according to some tests I'm performing, I'm finding very useful incorporating contextual information into the 'system role', as long as I can give particular instructions, for example:
