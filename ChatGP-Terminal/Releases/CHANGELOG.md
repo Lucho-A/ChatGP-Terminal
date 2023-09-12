@@ -1,3 +1,11 @@
+#### v1.1.5:2023XXXX-Under.Dev/Testing
+
+Bug-Fixed:
+- '--session-file': fixed creating session file if it doesn't exist when program starts.
+
+Others:
+- code optimized, minor changes & code cleaned-up
+
 #### v1.1.4:20230912
 
 Hashes:

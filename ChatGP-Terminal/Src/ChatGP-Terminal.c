@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--session-file")==0){
-			FILE *f=fopen(argv[i+1],"rw");
+			FILE *f=fopen(argv[i+1],"w+");
 			if(f==NULL){
 				printf("\n%sError opening/creating session file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
 				exit(EXIT_FAILURE);
