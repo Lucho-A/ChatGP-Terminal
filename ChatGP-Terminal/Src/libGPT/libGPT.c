@@ -319,7 +319,7 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 			line=NULL;
 		}
 		parse_string(&cgpt->systemRole, buffer);
-		printf("\n%s\n",cgpt->systemRole);
+		//printf("\n%s\n",cgpt->systemRole);
 		fclose(f);
 	}else{
 		if(systemRole!=NULL){
