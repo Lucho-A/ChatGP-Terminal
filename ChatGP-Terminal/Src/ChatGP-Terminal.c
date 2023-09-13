@@ -46,7 +46,7 @@ int readline_input(FILE *stream) {
 	return c;
 }
 
-static char *readline_get(char *prompt, bool addHistory){
+static char *readline_get(const char *prompt, bool addHistory){
 	char *lineRead=(char *)NULL;
 	if(lineRead){
 		free(lineRead);
@@ -320,20 +320,21 @@ int main(int argc, char *argv[]) {
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
-	rl_initialize();
 	rl_getc_function=readline_input;
+	char *messagePrompted=NULL;
 	do{
 		canceled=FALSE;
+		if(messagePrompted!=NULL) free(messagePrompted);
 		printf("%s\n",C_HCYAN);
-		char *message=readline_get(PROMPT, TRUE);
-		if(canceled==TRUE || strcmp(message,"")==0) continue;
+		messagePrompted=readline_get(PROMPT, TRUE);
+		if(canceled==TRUE || strcmp(messagePrompted,"")==0) continue;
 		printf("%s",C_DEFAULT);
-		if(strcmp(message,";")==0) break;
-		if(strcmp(message,"flush;")==0){
+		if(strcmp(messagePrompted,";")==0) break;
+		if(strcmp(messagePrompted,"flush;")==0){
 			libGPT_flush_history();
 			continue;
 		}
-		if(strcmp(message,"save;")==0){
+		if(strcmp(messagePrompted,"save;")==0){
 			if(saveMessagesTo==NULL || saveMessagesTo[0]==0){
 				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
 				continue;
@@ -341,13 +342,15 @@ int main(int argc, char *argv[]) {
 			if((resp=libGPT_save_message(saveMessagesTo, csv))!=RETURN_OK) printf("\n%sError saving file: %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 			continue;
 		}
-		send_chat(cgpt, message, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile);
+		send_chat(cgpt, messagePrompted, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile);
 	}while(TRUE);
 	if(sessionFile!=NULL){
 		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) printf("\n%sError dumping session. %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 	}
 	if(textToSpeech) espeak_Terminate();
+	free(messagePrompted);
 	libGPT_clean(&cgpt);
+	rl_clear_history();
 	printf("\n");
 	exit(EXIT_SUCCESS);
 }

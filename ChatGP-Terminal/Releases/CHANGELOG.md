@@ -1,4 +1,7 @@
-#### v1.1.5:2023XXXX-Under.Dev/Testing
+#### v1.1.5:20230913
+
+- SHA2-256(chatgp-terminal_1.1_5.deb)=c5dcbe59ace69d6db848c2dc42a2c196293998227bcd9d2afa0bb4290a701b2c
+- SHA2-256(chatgp-terminal_1.1_5.tar.gz)=c4733281b5b14b0c1afdd53ded719711095d85bf2bcc32bd66d62b913362d330
 
 Bug-Fixed:
 - '--session-file': fixed creating session file if it doesn't exist when program starts.
