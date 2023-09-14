@@ -21,7 +21,7 @@ The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal
   ```
   git clone https://github.com/lucho-a/ChatGP-Terminal.git
   cd ChatGP-Terminal/ChatGP-Terminal/Src
-  gcc -o chatgpt-terminal ChatGP-Terminal.c libGPT/* -lssl -lespeak -lpthread -lreadline
+  gcc -o chatgp-terminal ChatGP-Terminal.c libGPT/* -lssl -lespeak -lpthread -lreadline
   ```
   </ul>  
 <li> Documentation only (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
