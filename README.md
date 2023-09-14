@@ -3,21 +3,32 @@
 The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. At the moment, only model 'gpt-3.5-turbo' is supported.
 </p>
 <ul>
-  <li> Download: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
-  <li> Documentation only (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
-  <li> CHANGELOG/TODO: <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/CHANGELOG.md">here</a></li>
+<li> Downloads: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
+  <ul>
+  <li>Binary (amd64) and man page:</li>
+          
+  ```
+  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_5.tar.gz
+  ```
+  <li>Debian based distros:</li>
+
+  ```
+  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_5.deb
+  sudo apt-get install ./chatgp-terminal_1.1_5.deb
+  ```
+  <li>Compilation (prior installing dependencies):</li>
+  
+  ```
+  git clone https://github.com/lucho-a/ChatGP-Terminal.git
+  cd ChatGP-Terminal/ChatGP-Terminal/Src
+  gcc -o chatgpt-terminal ChatGP-Terminal.c libGPT/* -lssl -lespeak -lpthread -lreadline
+  ```
+  </ul>  
+<li> Documentation only (man): <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal.1.gz">here</a></li>
+<li> CHANGELOG/TODO: <a href="https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/CHANGELOG.md">here</a></li>
 </ul>
-<p align=justify>
-If you want to install it (recommended for resolving dependencies and man page):
-</p>
 
-```
-sudo apt-get install ./chatgp-terminal_x.x_x.deb
-```
-
-<p>
 Have Fun!
-</p>
 
 ### Dependencies:
 <ul>
@@ -27,7 +38,7 @@ Have Fun!
   <li>libespeak-ng.so.1</li>
 </ul>
 
-If you didn't install the package (deb), you can install the dependencies by executing:
+Installation (Debian way):
 
 ```
 sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
