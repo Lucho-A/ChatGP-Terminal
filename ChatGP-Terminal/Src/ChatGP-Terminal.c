@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.5
+ Version     : 1.1.6
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.5"
+#define PROGRAM_VERSION				"1.1.6"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -39,9 +39,26 @@
 #define	DEFAULT_RESPONSE_VELOCITY	10000
 
 bool canceled=FALSE;
+static int newLine=0;
 
 int readline_input(FILE *stream) {
 	int c=fgetc(stream);
+	switch(newLine){
+	case 0:
+		if(c==27) newLine++;
+		break;
+	case 1:
+		if(c==79) newLine++;
+		break;
+	case 2:
+		printf("\n");
+		newLine=0;
+		break;
+	default:
+		newLine=0;
+		break;
+	}
+	if(c==9) printf("\t");
 	if(c==-1 || c==4) return 13;
 	return c;
 }

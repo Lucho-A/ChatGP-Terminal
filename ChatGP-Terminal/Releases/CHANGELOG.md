@@ -1,3 +1,14 @@
+#### v1.1.6:202309XX-Under-Dev./Testing
+
+- SHA2-256(chatgp-terminal_1.1_6.deb)=
+- SHA2-256(chatgp-terminal_1.1_6.tar.gz)=
+
+Improvements:
+- Into prompt 'Shift+Enter' create a newline without submitting
+
+Others:
+- code optimized, minor changes & code cleaned-up
+
 #### v1.1.5:20230913
 
 - SHA2-256(chatgp-terminal_1.1_5.deb)=c5dcbe59ace69d6db848c2dc42a2c196293998227bcd9d2afa0bb4290a701b2c
@@ -21,7 +32,7 @@ Features:
 
 ```
 Act as IT professional, specialist in security, and tourist guide; and take the following into consideration:
-- When I chat about operating systems, prioritize Linux environment in your responses. I particular, Debian distro.
+- When I chat about operating systems, prioritize Linux environment in your responses. In particular, Debian distro.
 - When I request for places to go out, take into account that I'm planning going to Paris in holidays.
 ```
 

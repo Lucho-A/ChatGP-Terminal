@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.5
+ Version     : 1.1.6
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -40,7 +40,7 @@ static Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
 
-int parse_string(char **stringTo, char *stringFrom){
+static int parse_string(char **stringTo, char *stringFrom){
 	int cont=0, contEsc=0;
 	for(int i=0;i<strlen(stringFrom);i++){
 		switch(stringFrom[i]){
@@ -85,7 +85,7 @@ int parse_string(char **stringTo, char *stringFrom){
 	return RETURN_OK;
 }
 
-int format_string(char **stringTo, char *stringFrom){
+static int format_string(char **stringTo, char *stringFrom){
 	*stringTo=malloc(strlen(stringFrom)+1);
 	memset(*stringTo,0,strlen(stringFrom)+1);
 	int cont=0;
@@ -119,7 +119,7 @@ int format_string(char **stringTo, char *stringFrom){
 	return RETURN_OK;
 }
 
-int get_string_from_token(char *text, char *token, char **result, char endChar){
+static int get_string_from_token(char *text, char *token, char **result, char endChar){
 	ssize_t cont=0;
 	char *message=strstr(text,token);
 	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++);
@@ -130,7 +130,7 @@ int get_string_from_token(char *text, char *token, char **result, char endChar){
 	return RETURN_OK;
 }
 
-void create_new_history_message(char *userMessage, char *assistantMessage){
+static void create_new_history_message(char *userMessage, char *assistantMessage){
 	Messages *newMessage=malloc(sizeof(Messages));
 	newMessage->userMessage=malloc(strlen(userMessage)+1);
 	snprintf(newMessage->userMessage,strlen(userMessage)+1,"%s",userMessage);
@@ -296,25 +296,28 @@ char * libGPT_error(int error){
 	static char libGPTError[1024]="";
 	switch(error){
 	case LIBGPT_MALLOC_ERROR:
-		snprintf(libGPTError, 1024,"Malloc() error. ");
+		snprintf(libGPTError, 1024,"Malloc() error. %s", strerror(errno));
+		break;
+	case LIBGPT_REALLOC_ERROR:
+		snprintf(libGPTError, 1024,"Realloc() error. %s", strerror(errno));
 		break;
 	case LIBGPT_GETTING_HOST_INFO_ERROR:
-		snprintf(libGPTError, 1024,"Error getting host info. ");
+		snprintf(libGPTError, 1024,"Error getting host info. %s", strerror(errno));
 		break;
 	case LIBGPT_SOCKET_CREATION_ERROR:
-		snprintf(libGPTError, 1024,"Error creating socket. ");
+		snprintf(libGPTError, 1024,"Error creating socket. %s", strerror(errno));
 		break;
 	case LIBGPT_SOCKET_CONNECTION_TIMEOUT_ERROR:
 		snprintf(libGPTError, 1024,"Socket connection time out. ");
 		break;
 	case LIBGPT_SSL_CONTEXT_ERROR:
-		snprintf(libGPTError, 1024,"Error creating SSL context. ");
+		snprintf(libGPTError, 1024,"Error creating SSL context. %s", strerror(errno));
 		break;
 	case LIBGPT_SSL_FD_ERROR:
-		snprintf(libGPTError, 1024,"SSL fd error. ");
+		snprintf(libGPTError, 1024,"SSL fd error. %s", strerror(errno));
 		break;
 	case LIBGPT_SSL_CONNECT_ERROR:
-		snprintf(libGPTError, 1024,"SSL Connection error. ");
+		snprintf(libGPTError, 1024,"SSL Connection error. %s", strerror(errno));
 		break;
 	case LIBGPT_SOCKET_SEND_TIMEOUT_ERROR:
 		snprintf(libGPTError, 1024,"Sending packet time out. ");
@@ -333,9 +336,6 @@ char * libGPT_error(int error){
 		break;
 	case LIBGPT_RESPONSE_MESSAGE_ERROR:
 		snprintf(libGPTError, 1024,"Error message into JSON. ");
-		break;
-	case LIBGPT_BUFFERSIZE_OVERFLOW_ERROR:
-		snprintf(libGPTError, 1024,"Buffer overflow. Pls, let me know. ");
 		break;
 	case LIBGPT_ZEROBYTESRECV_ERROR:
 		snprintf(libGPTError, 1024,"Zero bytes received. Try again...");
@@ -383,10 +383,10 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 		ssize_t chars=0;
 		char *buffer=malloc(1);
 		memset(buffer,0,1);
-		if(buffer==NULL) return LIBGPT_BUFFERSIZE_OVERFLOW_ERROR;
+		if(buffer==NULL) return LIBGPT_MALLOC_ERROR;
 		if(systemRole!=NULL){
 			buffer=realloc(buffer,strlen(buffer)+strlen(systemRole)+3);
-			if(buffer==NULL) return LIBGPT_BUFFERSIZE_OVERFLOW_ERROR;
+			if(buffer==NULL) return LIBGPT_REALLOC_ERROR;
 			snprintf(buffer,strlen(systemRole)+3,"%s. ",systemRole);
 		}
 		while((chars=getline(&line, &len, f))!=-1){
@@ -394,7 +394,7 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 			if(buffer==NULL){
 				free(line);
 				free(buffer);
-				return LIBGPT_MALLOC_ERROR;
+				return LIBGPT_REALLOC_ERROR;
 			}
 			strcat(buffer,line);
 		}
@@ -417,7 +417,7 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 	return RETURN_OK;
 }
 
-void clean_ssl(SSL *ssl){
+static void clean_ssl(SSL *ssl){
 	SSL_shutdown(ssl);
 	SSL_certs_clear(ssl);
 	SSL_clear(ssl);
@@ -453,7 +453,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 		if(context==NULL){
 			free(context);
 			free(buf);
-			return LIBGPT_MALLOC_ERROR;
+			return LIBGPT_REALLOC_ERROR;
 		}
 		strcat(context,buf);
 		temp=temp->nextMessage;
@@ -468,7 +468,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	}
 	snprintf(buf,len,template,messageParsed);
 	context=realloc(context, strlen(context)+strlen(buf)+1);
-	if(context==NULL) return LIBGPT_MALLOC_ERROR;
+	if(context==NULL) return LIBGPT_REALLOC_ERROR;
 	strcat(context,buf);
 	free(buf);
 	template="{"
@@ -499,9 +499,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	char *httpMsg=malloc(len);
 	if(httpMsg==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(httpMsg,len,template,OPENAI_API_URL,cgpt.api,strlen(payload),payload);
-
-	//printf("\n%s (%ld)\n",httpMsg, strlen(httpMsg));
-
 	free(payload);
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
@@ -608,7 +605,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 				if(bufferHTTP==NULL){
 					clean_ssl(sslConn);
 					SSL_CTX_free(sslCtx);
-					return LIBGPT_MALLOC_ERROR;
+					return LIBGPT_REALLOC_ERROR;
 				}
 				strcat(bufferHTTP,buffer);
 				continue;
