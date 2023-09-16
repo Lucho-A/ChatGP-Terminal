@@ -5,6 +5,7 @@
 
 Improvements:
 - Into prompt 'Shift+Enter' create a newline without submitting
+- Prompt allows inserting tabs ('\t')
 
 Others:
 - code optimized, minor changes & code cleaned-up
