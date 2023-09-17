@@ -8,13 +8,13 @@ The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal
   <li>Binary (amd64) and man page:</li>
           
   ```
-  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_5.tar.gz
+  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_6.tar.gz
   ```
   <li>Debian based distros:</li>
 
   ```
-  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_5.deb
-  sudo apt-get install ./chatgp-terminal_1.1_5.deb
+  wget https://github.com/Lucho-A/ChatGP-Terminal/blob/master/ChatGP-Terminal/Releases/chatgp-terminal_1.1_6.deb
+  sudo apt-get install ./chatgp-terminal_1.1_6.deb
   ```
   <li>Compilation (prior installing dependencies):</li>
   

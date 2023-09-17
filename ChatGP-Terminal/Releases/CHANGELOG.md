@@ -1,11 +1,13 @@
-#### v1.1.6:202309XX-Under-Dev./Testing
+#### v1.1.6:20230917
 
-- SHA2-256(chatgp-terminal_1.1_6.deb)=
-- SHA2-256(chatgp-terminal_1.1_6.tar.gz)=
+- SHA2-256(chatgp-terminal_1.1_6.deb)=078c06c73b747ebe113295f1391e44f390043245ac4aa63e21a548fa17f97fd7
+- SHA2-256(chatgp-terminal_1.1_6.tar.gz)=0031356b4272146c9235b7331e44b62110d0781865da2268d9e6282a5ea2b6df
 
 Improvements:
-- Into prompt 'Shift+Enter' create a newline without submitting
+- Into prompt 'Shift+Enter' create a newline without submitting (1)
 - Prompt allows inserting tabs ('\t')
+
+(1) if you use WSL2 terminal, take into account that you could need to key-binding this key combination.
 
 Others:
 - code optimized, minor changes & code cleaned-up

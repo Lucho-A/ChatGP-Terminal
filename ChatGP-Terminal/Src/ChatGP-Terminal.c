@@ -357,6 +357,7 @@ int main(int argc, char *argv[]) {
 			char *buffer=readline_get(prompt, FALSE);
 			messagePrompted=realloc(messagePrompted,strlen(messagePrompted)+strlen(buffer)+strlen("\n")+1);
 			strcat(messagePrompted,buffer);
+			if(strcmp(messagePrompted,"")==0) break;
 			add_history(messagePrompted);
 			strcat(messagePrompted,"\n");
 			prompt=PROMPT_NEW_LINE;
@@ -384,6 +385,7 @@ int main(int argc, char *argv[]) {
 	}
 	if(textToSpeech) espeak_Terminate();
 	libGPT_clean(&cgpt);
+	free(messagePrompted);
 	rl_clear_history();
 	printf("\n");
 	exit(EXIT_SUCCESS);
