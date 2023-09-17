@@ -33,13 +33,16 @@
 #define C_HWHITE 					"\e[0;97m"
 #define C_DEFAULT 					"\e[0m"
 
-#define PROMPT						";=exit) -> "
+#define PROMPT_DEFAULT				";=exit) -> "
+#define PROMPT_NEW_LINE				"-> " //add line number??
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
 #define	DEFAULT_RESPONSE_VELOCITY	10000
 
+char *prompt=PROMPT_DEFAULT;
 bool canceled=FALSE;
-static int newLine=0;
+int newLine=0;
+bool submit=TRUE;
 
 int readline_input(FILE *stream) {
 	int c=fgetc(stream);
@@ -51,14 +54,18 @@ int readline_input(FILE *stream) {
 		if(c==79) newLine++;
 		break;
 	case 2:
-		printf("\n");
-		newLine=0;
-		break;
+		if(c==77){
+			submit=FALSE;
+			rl_stuff_char('\n');
+		}
 	default:
 		newLine=0;
 		break;
 	}
-	if(c==9) printf("\t");
+	if(c==9){
+		printf("\t");
+	    rl_insert_text("\t");
+	}
 	if(c==-1 || c==4) return 13;
 	return c;
 }
@@ -341,13 +348,24 @@ int main(int argc, char *argv[]) {
 	char *messagePrompted=NULL;
 	do{
 		canceled=FALSE;
-		if(messagePrompted!=NULL) free(messagePrompted);
+		free(messagePrompted);
+		messagePrompted=malloc(1);
+		memset(messagePrompted,0,1);
 		printf("%s\n",C_HCYAN);
-		messagePrompted=readline_get(PROMPT, TRUE);
+		prompt=PROMPT_DEFAULT;
+		do{
+			submit=TRUE;
+			char *buffer=readline_get(prompt, TRUE);
+			messagePrompted=realloc(messagePrompted,strlen(messagePrompted)+strlen(buffer)+strlen("\n")+1);
+			strcat(messagePrompted,buffer);
+			strcat(messagePrompted,"\n");
+			prompt=PROMPT_NEW_LINE;
+			free(buffer);
+		}while(!submit);
 		if(canceled==TRUE || strcmp(messagePrompted,"")==0) continue;
 		printf("%s",C_DEFAULT);
-		if(strcmp(messagePrompted,";")==0) break;
-		if(strcmp(messagePrompted,"flush;")==0){
+		if(strcmp(messagePrompted,";\n")==0) break;
+		if(strcmp(messagePrompted,"flush;\n")==0){
 			libGPT_flush_history();
 			continue;
 		}
@@ -365,7 +383,6 @@ int main(int argc, char *argv[]) {
 		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) printf("\n%sError dumping session. %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 	}
 	if(textToSpeech) espeak_Terminate();
-	free(messagePrompted);
 	libGPT_clean(&cgpt);
 	rl_clear_history();
 	printf("\n");
