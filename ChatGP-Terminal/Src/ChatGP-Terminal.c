@@ -39,7 +39,6 @@
 
 #define	DEFAULT_RESPONSE_VELOCITY	10000
 
-char *prompt=PROMPT_DEFAULT;
 bool canceled=FALSE;
 int newLine=0;
 bool submit=TRUE;
@@ -352,12 +351,13 @@ int main(int argc, char *argv[]) {
 		messagePrompted=malloc(1);
 		memset(messagePrompted,0,1);
 		printf("%s\n",C_HCYAN);
-		prompt=PROMPT_DEFAULT;
+		char *prompt=PROMPT_DEFAULT;
 		do{
 			submit=TRUE;
-			char *buffer=readline_get(prompt, TRUE);
+			char *buffer=readline_get(prompt, FALSE);
 			messagePrompted=realloc(messagePrompted,strlen(messagePrompted)+strlen(buffer)+strlen("\n")+1);
 			strcat(messagePrompted,buffer);
+			add_history(messagePrompted);
 			strcat(messagePrompted,"\n");
 			prompt=PROMPT_NEW_LINE;
 			free(buffer);
@@ -369,7 +369,7 @@ int main(int argc, char *argv[]) {
 			libGPT_flush_history();
 			continue;
 		}
-		if(strcmp(messagePrompted,"save;")==0){
+		if(strcmp(messagePrompted,"save;\n")==0){
 			if(saveMessagesTo==NULL || saveMessagesTo[0]==0){
 				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
 				continue;
