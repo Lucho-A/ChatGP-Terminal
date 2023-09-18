@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.6
+ Version     : 1.1.7
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -500,6 +500,9 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	if(httpMsg==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(httpMsg,len,template,OPENAI_API_URL,cgpt.api,strlen(payload),payload);
 	free(payload);
+
+	//printf("\n%s\n", httpMsg);
+
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
 	int socketConn=0;

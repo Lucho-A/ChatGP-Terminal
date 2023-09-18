@@ -1,3 +1,16 @@
+#### v1.1.7:202309XX
+
+- SHA2-256(chatgp-terminal_1.1_7.deb)=
+- SHA2-256(chatgp-terminal_1.1_7.tar.gz)=
+
+Improvements:
+- multi-line editing improved.
+
+Others:
+- in order to achieve more and best compatibility among platforms, I changed the way for submitting a prompt and exiting the program. Now, in order to generate a newline, "esc + enter" must be pressed (if you want to generate more than one, you must release 'esc' key and repeat). Double 'esc' abort prompt/exit program (when empty prompt).
+- because previous bullet, prompt string changed.
+- code optimized, minor changes & code cleaned-up
+
 #### v1.1.6:20230917
 
 - SHA2-256(chatgp-terminal_1.1_6.deb)=078c06c73b747ebe113295f1391e44f390043245ac4aa63e21a548fa17f97fd7

@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.h
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.6
+ Version     : 1.1.7
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Header file
@@ -18,7 +18,7 @@
 #define LIBGPT_NAME 						"libGPT"
 #define LIBGPT_MAJOR_VERSION				"1"
 #define LIBGPT_MINOR_VERSION				"1"
-#define LIBGPT_MICRO_VERSION				"6"
+#define LIBGPT_MICRO_VERSION				"7"
 #define LIBGPT_VERSION						PROGRAM_MAJOR_VERSION"."PROGRAM_MINOR_VERSION"."PROGRAM_MICRO_VERSION
 #define LIBGPT_DESCRIPTION					"C Library for ChatGPT"
 

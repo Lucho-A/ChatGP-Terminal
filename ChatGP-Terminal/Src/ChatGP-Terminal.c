@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.6
+ Version     : 1.1.7
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.6"
+#define PROGRAM_VERSION				"1.1.7"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -33,39 +33,31 @@
 #define C_HWHITE 					"\e[0;97m"
 #define C_DEFAULT 					"\e[0m"
 
-#define PROMPT_DEFAULT				";=exit) -> "
-#define PROMPT_NEW_LINE				"-> " //add line number??
+#define PROMPT_DEFAULT				"-> "
 #define BANNER 						printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
 
 #define	DEFAULT_RESPONSE_VELOCITY	10000
 
 bool canceled=FALSE;
-int newLine=0;
-bool submit=TRUE;
+bool exitProgram=FALSE;
+int prevInput=0;
 
-int readline_input(FILE *stream) {
+int readline_input(FILE *stream){
+	if(exitProgram) return 13;
 	int c=fgetc(stream);
-	switch(newLine){
-	case 0:
-		if(c==27) newLine++;
-		break;
-	case 1:
-		if(c==79) newLine++;
-		break;
-	case 2:
-		if(c==77){
-			submit=FALSE;
-			rl_stuff_char('\n');
-		}
-	default:
-		newLine=0;
-		break;
+	if(c==13 && prevInput==27){
+		rl_insert_text("\n");
+		prevInput=0;
+		return 0;
 	}
-	if(c==9){
-		printf("\t");
-	    rl_insert_text("\t");
+	if(c==27 && prevInput==27 && rl_key_sequence_length==1){
+		exitProgram=TRUE;
+		return 13;
 	}
+	if(c==8) return 0;
+	if(c==9) rl_insert_text("\t");
 	if(c==-1 || c==4) return 13;
+	prevInput=c;
 	return c;
 }
 
@@ -346,31 +338,22 @@ int main(int argc, char *argv[]) {
 	rl_getc_function=readline_input;
 	char *messagePrompted=NULL;
 	do{
+		exitProgram=FALSE;
 		canceled=FALSE;
 		free(messagePrompted);
 		messagePrompted=malloc(1);
 		memset(messagePrompted,0,1);
 		printf("%s\n",C_HCYAN);
-		char *prompt=PROMPT_DEFAULT;
-		do{
-			submit=TRUE;
-			char *buffer=readline_get(prompt, FALSE);
-			messagePrompted=realloc(messagePrompted,strlen(messagePrompted)+strlen(buffer)+strlen("\n")+1);
-			strcat(messagePrompted,buffer);
-			if(strcmp(messagePrompted,"")==0) break;
-			add_history(messagePrompted);
-			strcat(messagePrompted,"\n");
-			prompt=PROMPT_NEW_LINE;
-			free(buffer);
-		}while(!submit);
-		if(canceled==TRUE || strcmp(messagePrompted,"")==0) continue;
+		char *messagePrompted=readline_get(PROMPT_DEFAULT, FALSE);
+		if(exitProgram && strcmp(messagePrompted,"")==0) break;
+		if(exitProgram || canceled || strcmp(messagePrompted,"")==0) continue;
+		add_history(messagePrompted);
 		printf("%s",C_DEFAULT);
-		if(strcmp(messagePrompted,";\n")==0) break;
-		if(strcmp(messagePrompted,"flush;\n")==0){
+		if(strcmp(messagePrompted,"flush;")==0){
 			libGPT_flush_history();
 			continue;
 		}
-		if(strcmp(messagePrompted,"save;\n")==0){
+		if(strcmp(messagePrompted,"save;")==0){
 			if(saveMessagesTo==NULL || saveMessagesTo[0]==0){
 				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
 				continue;
