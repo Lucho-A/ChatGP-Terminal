@@ -500,9 +500,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	if(httpMsg==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(httpMsg,len,template,OPENAI_API_URL,cgpt.api,strlen(payload),payload);
 	free(payload);
-
-	//printf("\n%s\n", httpMsg);
-
 	struct pollfd pfds[1];
 	int numEvents=0,pollinHappened=0,bytesSent=0;
 	int socketConn=0;

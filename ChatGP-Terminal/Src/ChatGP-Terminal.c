@@ -341,11 +341,12 @@ int main(int argc, char *argv[]) {
 		exitProgram=FALSE;
 		canceled=FALSE;
 		free(messagePrompted);
-		messagePrompted=malloc(1);
-		memset(messagePrompted,0,1);
 		printf("%s\n",C_HCYAN);
-		char *messagePrompted=readline_get(PROMPT_DEFAULT, FALSE);
-		if(exitProgram && strcmp(messagePrompted,"")==0) break;
+		messagePrompted=readline_get(PROMPT_DEFAULT, FALSE);
+		if(exitProgram && strcmp(messagePrompted,"")==0){
+			free(messagePrompted);
+			break;
+		}
 		if(exitProgram || canceled || strcmp(messagePrompted,"")==0) continue;
 		add_history(messagePrompted);
 		printf("%s",C_DEFAULT);
@@ -368,7 +369,6 @@ int main(int argc, char *argv[]) {
 	}
 	if(textToSpeech) espeak_Terminate();
 	libGPT_clean(&cgpt);
-	free(messagePrompted);
 	rl_clear_history();
 	printf("\n");
 	exit(EXIT_SUCCESS);
