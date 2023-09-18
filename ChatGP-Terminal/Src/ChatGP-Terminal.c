@@ -356,7 +356,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(messagePrompted,"save;")==0){
 			if(saveMessagesTo==NULL || saveMessagesTo[0]==0){
-				printf("\n%sNo file defined (you can specify it using: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
+				printf("\n%sNo file defined (see: '--save-message-to' option)%s\n",C_HRED,C_DEFAULT);
 				continue;
 			}
 			if((resp=libGPT_save_message(saveMessagesTo, csv))!=RETURN_OK) printf("\n%sError saving file: %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
