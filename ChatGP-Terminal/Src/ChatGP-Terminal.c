@@ -46,15 +46,14 @@ int readline_input(FILE *stream){
 	if(exitProgram) return 13;
 	int c=fgetc(stream);
 	if(c==13 && prevInput==27){
-		rl_insert_text("\n");
-		prevInput=0;
-		return 0;
-	}
-	if(c==27 && prevInput==27 && rl_key_sequence_length==1){
+		if(strlen(rl_line_buffer)!=0){
+			rl_insert_text("\n");
+			prevInput=0;
+			return 0;
+		}
 		exitProgram=TRUE;
 		return 13;
 	}
-	if(c==8) return 0;
 	if(c==9) rl_insert_text("\t");
 	if(c==-1 || c==4) return 13;
 	prevInput=c;
