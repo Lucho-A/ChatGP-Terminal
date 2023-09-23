@@ -41,7 +41,7 @@ Have Fun!
 Installation (Debian way):
 
 ```
-sudo apt-get install libssl3 libreadline8 libc6 libespeak-ng1
+sudo apt-get install libssl3-dev libreadline-dev libc6-dev libespeak-ng-dev
 ```
 
 ### Usage:
