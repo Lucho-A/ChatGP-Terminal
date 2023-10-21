@@ -1,3 +1,11 @@
+#### v1.1.8:202310XX/Under-Testing
+
+- SHA2-256(chatgp-terminal_1.1_7.deb)=
+- SHA2-256(chatgp-terminal_1.1_7.tar.gz)=
+
+Bug-Fixed:
+- fixed free arrays avoiding uncommon segmentation fault when communication error occurs.
+
 #### v1.1.7:20230919
 
 - SHA2-256(chatgp-terminal_1.1_7.deb)=ea1597b1b0e4b6af62ec244e242f2e22b598f40987877ec7c06a254e5f4a6214

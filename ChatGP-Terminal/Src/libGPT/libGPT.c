@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.7
+ Version     : 1.1.8
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -168,6 +168,7 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
 		memset(cgptResponse->contentFormatted,0,strlen(buffer)+1);
 		format_string(&cgptResponse->contentFormatted, buffer);
+		free(messageSent);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 	free(buffer);
@@ -445,12 +446,14 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 		len=strlen(template)+strlen(temp->userMessage)+strlen(temp->assistantMessage);
 		buf=malloc(len);
 		if(buf==NULL){
+			free(messageParsed);
 			free(context);
 			return LIBGPT_MALLOC_ERROR;
 		}
 		snprintf(buf,len,template,temp->userMessage,temp->assistantMessage);
 		context=realloc(context, strlen(context)+strlen(buf)+1);
 		if(context==NULL){
+			free(messageParsed);
 			free(context);
 			free(buf);
 			return LIBGPT_REALLOC_ERROR;
@@ -463,12 +466,16 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	len=strlen(template) + strlen(messageParsed);
 	buf=malloc(len);
 	if(buf==NULL){
+		free(messageParsed);
 		free(context);
 		return LIBGPT_MALLOC_ERROR;
 	}
 	snprintf(buf,len,template,messageParsed);
 	context=realloc(context, strlen(context)+strlen(buf)+1);
-	if(context==NULL) return LIBGPT_REALLOC_ERROR;
+	if(context==NULL){
+		free(messageParsed);
+		return LIBGPT_REALLOC_ERROR;
+	}
 	strcat(context,buf);
 	free(buf);
 	template="{"
@@ -483,7 +490,10 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"}";
 	len=strlen(template)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)+sizeof(cgpt.temperature);
 	char *payload=malloc(len);
-	if(payload==NULL) return LIBGPT_MALLOC_ERROR;
+	if(payload==NULL){
+		free(messageParsed);
+		return LIBGPT_MALLOC_ERROR;
+	}
 	snprintf(payload,len,template,cgpt.systemRole,context,cgpt.maxTokens,cgpt.temperature);
 	free(context);
 	template="POST /v1/chat/completions HTTP/1.1\r\n"
@@ -533,15 +543,18 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	SSL *sslConn=NULL;
 	SSL_CTX *sslCtx=NULL;
 	if((sslCtx=SSL_CTX_new(SSLv23_method()))==NULL){
+		free(messageParsed);
 		SSL_CTX_free(sslCtx);
 		return LIBGPT_SSL_CONTEXT_ERROR;
 	}
 	if((sslConn=SSL_new(sslCtx))==NULL){
+		free(messageParsed);
 		clean_ssl(sslConn);
 		SSL_CTX_free(sslCtx);
 		return LIBGPT_SSL_CONTEXT_ERROR;
 	}
 	if(!SSL_set_fd(sslConn, socketConn)){
+		free(messageParsed);
 		clean_ssl(sslConn);
 		SSL_CTX_free(sslCtx);
 		return LIBGPT_SSL_FD_ERROR;
@@ -549,6 +562,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	SSL_set_connect_state(sslConn);
 	SSL_set_tlsext_host_name(sslConn, OPENAI_API_URL);
 	if(!SSL_connect(sslConn)){
+		free(messageParsed);
 		clean_ssl(sslConn);
 		SSL_CTX_free(sslCtx);
 		return LIBGPT_SSL_CONNECT_ERROR;
@@ -558,6 +572,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	pfds[0].events=POLLOUT;
 	numEvents=poll(pfds,1,SOCKET_SEND_TIMEOUT_MS);
 	if(numEvents==0){
+		free(messageParsed);
 		close(socketConn);
 		clean_ssl(sslConn);
 		SSL_CTX_free(sslCtx);
@@ -572,12 +587,14 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 		}
 		free(httpMsg);
 		if(bytesSent<=0){
+			free(messageParsed);
 			close(socketConn);
 			clean_ssl(sslConn);
 			SSL_CTX_free(sslCtx);
 			return LIBGPT_SENDING_PACKETS_ERROR;
 		}
 	}else{
+		free(messageParsed);
 		free(httpMsg);
 		close(socketConn);
 		clean_ssl(sslConn);
@@ -591,6 +608,8 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	do{
 		numEvents=poll(pfds, 1, SOCKET_RECV_TIMEOUT_MS);
 		if(numEvents==0){
+			free(messageParsed);
+			free(bufferHTTP);
 			close(socketConn);
 			clean_ssl(sslConn);
 			SSL_CTX_free(sslCtx);
@@ -603,6 +622,8 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 				totalBytesReceived+=bytesReceived;
 				bufferHTTP=realloc(bufferHTTP, sizeof(bufferHTTP)+sizeof(buffer)+1);
 				if(bufferHTTP==NULL){
+					free(messageParsed);
+					free(bufferHTTP);
 					clean_ssl(sslConn);
 					SSL_CTX_free(sslCtx);
 					return LIBGPT_REALLOC_ERROR;
@@ -616,18 +637,24 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			}
 			if(bytesReceived<0 && (errno==EAGAIN || errno==EWOULDBLOCK)) continue;
 			if(bytesReceived<0 && (errno!=EAGAIN)){
+				free(messageParsed);
+				free(bufferHTTP);
 				close(socketConn);
 				clean_ssl(sslConn);
 				SSL_CTX_free(sslCtx);
 				return LIBGPT_RECEIVING_PACKETS_ERROR;
 			}
 		}else{
+			free(messageParsed);
+			free(bufferHTTP);
 			clean_ssl(sslConn);
 			SSL_CTX_free(sslCtx);
 			return LIBGPT_POLLIN_ERROR;
 		}
 	}while(TRUE);
 	if(totalBytesReceived==0){
+		free(messageParsed);
+		free(bufferHTTP);
 		clean_ssl(sslConn);
 		SSL_CTX_free(sslCtx);
 		return LIBGPT_ZEROBYTESRECV_ERROR;
