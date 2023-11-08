@@ -1,7 +1,15 @@
+#### v1.1.9:2023XXXX (under testing)
+
+- SHA2-256(chatgp-terminal_1.1_9.deb)=
+- SHA2-256(chatgp-terminal_1.1_9.tar.gz)=
+
+Bug-Fixed:
+- fixed segmentation fault when JSON with unexpected format responses is received.
+
 #### v1.1.8:20231022
 
-- SHA2-256(chatgp-terminal_1.1_7.deb)=c6a33fdc45d13695789bab6249efd11212969eef28699b2bc3ae023797d7ded7
-- SHA2-256(chatgp-terminal_1.1_7.tar.gz)=7039f96c8d7adb4c83dd6604d4e701daf6baeaa84484707fe7d96188eb8d007b
+- SHA2-256(chatgp-terminal_1.1_8.deb)=c6a33fdc45d13695789bab6249efd11212969eef28699b2bc3ae023797d7ded7
+- SHA2-256(chatgp-terminal_1.1_8.tar.gz)=7039f96c8d7adb4c83dd6604d4e701daf6baeaa84484707fe7d96188eb8d007b
 
 Bug-Fixed:
 - fixed free arrays avoiding uncommon segmentation fault when communication error occurs.

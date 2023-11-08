@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.8
+ Version     : 1.1.9
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -122,6 +122,7 @@ static int format_string(char **stringTo, char *stringFrom){
 static int get_string_from_token(char *text, char *token, char **result, char endChar){
 	ssize_t cont=0;
 	char *message=strstr(text,token);
+	if(message==NULL) return RETURN_ERROR;
 	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++);
 	*result=malloc(cont+1);
 	memset(*result,0,cont+1);
@@ -172,11 +173,11 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 	free(buffer);
-	get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,'\n');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
 	cgptResponse->created=strtol(buffer,NULL,10);
 	free(buffer);
 
-	get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->content=malloc(strlen(buffer)+1);
 	memset(cgptResponse->content,0,strlen(buffer)+1);
 	snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
@@ -185,21 +186,21 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	free(messageSent);
 	free(buffer);
 
-	get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
 	memset(cgptResponse->finishReason,0,strlen(buffer)+1);
 	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
 	free(buffer);
 
-	get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,'\n');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->promptTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,'\n');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->completionTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'\n');
+	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
@@ -346,6 +347,9 @@ char * libGPT_error(int error){
 		break;
 	case LIBGPT_NO_HISTORY_CONTEXT_ERROR:
 		snprintf(libGPTError, 1024,"No message to save. ");
+		break;
+	case LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR:
+		snprintf(libGPTError, 1024,"Unexpected JSON format error. ");
 		break;
 	default:
 		snprintf(libGPTError, 1024,"Error not handled. ");
@@ -620,7 +624,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			bytesReceived=SSL_read(sslConn,buffer, BUFFER_SIZE_16K);
 			if(bytesReceived>0){
 				totalBytesReceived+=bytesReceived;
-				bufferHTTP=realloc(bufferHTTP, sizeof(bufferHTTP)+sizeof(buffer)+1);
+				bufferHTTP=realloc(bufferHTTP, strlen(bufferHTTP)+strlen(buffer)+1);
 				if(bufferHTTP==NULL){
 					free(messageParsed);
 					free(bufferHTTP);
