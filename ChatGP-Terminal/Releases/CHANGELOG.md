@@ -3,8 +3,16 @@
 - SHA2-256(chatgp-terminal_1.1_9.deb)=
 - SHA2-256(chatgp-terminal_1.1_9.tar.gz)=
 
+Features:
+- Added option '--check-status'. Check the status service when start the program.
+- prompting 'status;', show the status of the service.
+
 Bug-Fixed:
 - fixed segmentation fault when JSON with unexpected format responses is received.
+
+Others:
+- Changed default max. tokens -> 1024
+- code optimized, minor changes & code cleaned-up
 
 #### v1.1.8:20231022
 

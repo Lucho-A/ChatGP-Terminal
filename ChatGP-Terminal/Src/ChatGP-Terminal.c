@@ -28,6 +28,7 @@
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
 #define C_YELLOW 					"\e[0;33m"
+#define C_HGREEN 					"\e[0;92m"
 #define C_HRED 						"\e[0;91m"
 #define C_HCYAN 					"\e[0;96m"
 #define C_HWHITE 					"\e[0;97m"
@@ -127,8 +128,20 @@ void signal_handler(int signalType){
 	}
 }
 
+void check_service_status(){
+	char *serviceStatus=NULL;
+	int resp=0;
+	if((resp=libGPT_get_service_status(&serviceStatus))!= RETURN_OK){
+		printf("\n%s%s%s\n",C_HRED, libGPT_error(resp),C_DEFAULT);
+		return;
+	}
+	printf("\nService Status: %s'%s'%s\n",C_HWHITE,serviceStatus,C_DEFAULT);
+	free(serviceStatus);
+	return;
+}
+
 void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens,
-		bool showCompletionTokens, bool showTotalTokens, bool showCost, bool tts, char *logFile){
+		bool showCompletionTokens, bool showTotalTokens, bool showCost, bool tts, char *logFile, bool checkStatus){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
@@ -159,10 +172,13 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
-	char *apikey="", *role=NULL, *message=NULL, *saveMessagesTo="", *sessionFile=NULL, *roleFile=NULL, *logFile=NULL;
+	char *apikey="", *role=NULL, *message=NULL, *saveMessagesTo="", *sessionFile=NULL, *roleFile=NULL,
+			*logFile=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY, maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
-	bool showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE, showCost=FALSE;
+	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY,
+			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
+	bool checkStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,
+			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE,showCost=FALSE;
 	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
@@ -270,6 +286,11 @@ int main(int argc, char *argv[]) {
 			message=argv[i+1];
 			continue;
 		}
+		if(strcmp(argv[i],"--check-status")==0){
+			checkStatus=TRUE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--show-finished-status")==0){
 			showFinishedStatus=TRUE;
 			i--;
@@ -330,10 +351,12 @@ int main(int argc, char *argv[]) {
 		if((resp=libGPT_import_session_file(sessionFile))!=RETURN_OK) printf("\n%sError importing session file. %s%s\n\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, 0, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, FALSE, logFile);
+		send_chat(cgpt, message, 0, showFinishedStatus, showPromptTokens, showCompletionTokens,
+				showTotalTokens, showCost, FALSE, logFile, checkStatus);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
 	}
+	if(checkStatus) check_service_status();
 	rl_getc_function=readline_input;
 	char *messagePrompted=NULL;
 	do{
@@ -342,13 +365,16 @@ int main(int argc, char *argv[]) {
 		free(messagePrompted);
 		printf("%s\n",C_HCYAN);
 		messagePrompted=readline_get(PROMPT_DEFAULT, FALSE);
+		printf("%s",C_DEFAULT);
 		if(exitProgram && strcmp(messagePrompted,"")==0){
 			free(messagePrompted);
 			break;
 		}
 		if(exitProgram || canceled || strcmp(messagePrompted,"")==0) continue;
-		add_history(messagePrompted);
-		printf("%s",C_DEFAULT);
+		if(strcmp(messagePrompted,"status;")==0){
+			check_service_status();
+			continue;
+		}
 		if(strcmp(messagePrompted,"flush;")==0){
 			libGPT_flush_history();
 			continue;
@@ -361,7 +387,9 @@ int main(int argc, char *argv[]) {
 			if((resp=libGPT_save_message(saveMessagesTo, csv))!=RETURN_OK) printf("\n%sError saving file: %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 			continue;
 		}
-		send_chat(cgpt, messagePrompted, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile);
+		send_chat(cgpt, messagePrompted, responseVelocity, showFinishedStatus, showPromptTokens,
+				showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile, checkStatus);
+		add_history(messagePrompted);
 	}while(TRUE);
 	if(sessionFile!=NULL){
 		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) printf("\n%sError dumping session. %s%s\n",C_HRED,libGPT_error(resp),C_DEFAULT);

@@ -23,13 +23,15 @@
 #define LIBGPT_DESCRIPTION					"C Library for ChatGPT"
 
 #define	LIBGPT_DEFAULT_ROLE					""
-#define	LIBGPT_DEFAULT_MAX_TOKENS			512
+#define	LIBGPT_DEFAULT_MAX_TOKENS			1024
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
 #define	LIBGPT_DEFAULT_MAX_CONTEXT_MSGS		3
 #define	LIBGPT_PROMPT_COST					0.0015
 #define	LIBGPT_COMPLETION_COST				0.002
+#define	LIBGPT_DEFAULT_STATUS_REFRESH		0
 
 #define PRINT_DBG							printf("\n\e[0;31mWTFFFF\e[0m\n");
+#define PRINT_DATE_DBG						system("date")
 
 typedef enum{
 	FALSE=0,
@@ -78,6 +80,7 @@ typedef struct ChatGPTResponse{
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, char *, long int, double, int);
+int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);
 int libGPT_import_session_file(char *);
