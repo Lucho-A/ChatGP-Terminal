@@ -1,7 +1,7 @@
-#### v1.1.9:2023XXXX (under testing)
+#### v1.1.9:20231110
 
-- SHA2-256(chatgp-terminal_1.1_9.deb)=
-- SHA2-256(chatgp-terminal_1.1_9.tar.gz)=
+- SHA2-256(chatgp-terminal_1.1_9.deb)=6e3752a20eefcba4effcc8e5ef9f651700b0d98544c9a2c4fc798f245f7ae260
+- SHA2-256(chatgp-terminal_1.1_9.tar.gz)=a34aeb603c9a375c4e2d6f4d15aff616b4ff7990a58a2dfc813e1df056d58f74
 
 Features:
 - Added option '--check-status'. Check the status service when start the program.
