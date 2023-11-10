@@ -55,7 +55,7 @@ chatgp-terminal --help
 I'm using this way right now, and works pretty smoothly:
 
 ```
-chatgp-terminal --apikeyfile ~/.cgpt/.cgpt.key --max-context-messages 5 --max-tokens 1024 --role-file ~/.cgpt/cgpt.role --session-file ~/.cgpt/.cgpt.session --save-messages-to ~/.cgpt/cgpt.msg --log-file ~/.cgpt/cgpt.log
+chatgp-terminal --apikeyfile ~/.cgpt/.cgpt.key --check-status --max-context-messages 5 --max-tokens 1024 --role-file ~/.cgpt/cgpt.role --session-file ~/.cgpt/.cgpt.session --save-messages-to ~/.cgpt/cgpt.msg --log-file ~/.cgpt/cgpt.log
 ```
 
 Into the man page you can find others.
