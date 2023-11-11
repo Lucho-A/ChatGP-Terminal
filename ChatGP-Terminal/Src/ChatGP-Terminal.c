@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.9
+ Version     : 1.2.0
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME				"ChatGP-Terminal"
-#define PROGRAM_VERSION				"1.1.9"
+#define PROGRAM_VERSION				"1.2.0"
 #define PROGRAM_URL					"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT				"<https://lucho-a.github.io/>"
 
@@ -176,10 +176,10 @@ int main(int argc, char *argv[]) {
 			*logFile=NULL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY,
-			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
+			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS, n=LIBGPT_DEFAULT_N;
 	bool checkStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,
 			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE,showCost=FALSE;
-	double temperature=LIBGPT_DEFAULT_TEMPERATURE;
+	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY, temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
 		if(strcmp(argv[i],"--version")==0){
@@ -187,6 +187,10 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_SUCCESS);
 		}
 		if(strcmp(argv[i],"--apikeyfile")==0){
+			if(i+1>=argc){
+				printf("\n%s--apikeyfile: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			FILE *f=fopen(argv[i+1],"r");
 			if(f==NULL){
 				printf("\n%sError opening API key file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
@@ -198,30 +202,74 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--apikey")==0){
+			if(i+1>=argc){
+				printf("\n%s--apikey: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			apikey=argv[i+1];
 			continue;
 		}
 		if(strcmp(argv[i],"--role")==0){
+			if(i+1>=argc){
+				printf("\n%s--role: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			role=argv[i+1];
 			continue;
 		}
 		if(strcmp(argv[i],"--max-tokens")==0){
+			if(i+1>=argc){
+				printf("\n%s--max-tokens: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			maxTokens=strtoul(argv[i+1],&tail,10);
-			if(maxTokens<=0 || *tail!='\0'){
+			if(*tail!='\0'){
 				printf("\n%sMax.Tokens value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
+		if(strcmp(argv[i],"--freq-penalty")==0){
+			if(i+1>=argc){
+				printf("\n%s--freq-penalty: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			freqPenalty=strtod(argv[i+1],&tail);
+			if(*tail!='\0'){
+				printf("\n%sFrequency Penalty value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			continue;
+		}
 		if(strcmp(argv[i],"--temperature")==0){
+			if(i+1>=argc){
+				printf("\n%s--temperature: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			temperature=strtod(argv[i+1],&tail);
-			if(temperature<=0.0 || temperature>2.0 || *tail!='\0'){
+			if(*tail!='\0'){
 				printf("\n%sTemperature value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
+		if(strcmp(argv[i],"--n")==0){
+			if(i+1>=argc){
+				printf("\n%s--n: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			n=strtoul(argv[i+1],&tail,10);
+			if(*tail!='\0'){
+				printf("\n%sN value not valid.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
+			continue;
+		}
 		if(strcmp(argv[i],"--response-velocity")==0){
+			if(i+1>=argc){
+				printf("\n%s--response-velocity: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			responseVelocity=strtod(argv[i+1],&tail);
 			if(responseVelocity<=0 || *tail!='\0'){
 				printf("\n%sResponse velocity value not valid.%s\n\n",C_HRED,C_DEFAULT);
@@ -230,14 +278,22 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--max-context-messages")==0){
+			if(i+1>=argc){
+				printf("\n%s--max-context-messages: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			maxContextMessages=strtod(argv[i+1],&tail);
-			if(maxContextMessages<0 || *tail!='\0'){
+			if(*tail!='\0'){
 				printf("\n%sMax. Context Messages value not valid.%s\n\n",C_HRED,C_DEFAULT);
 				exit(EXIT_FAILURE);
 			}
 			continue;
 		}
 		if(strcmp(argv[i],"--session-file")==0){
+			if(i+1>=argc){
+				printf("\n%s--session-file: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			FILE *f=fopen(argv[i+1],"a");
 			if(f==NULL){
 				printf("\n%sError opening/creating session file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
@@ -248,6 +304,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--role-file")==0){
+			if(i+1>=argc){
+				printf("\n%s--role-file: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			FILE *f=fopen(argv[i+1],"r");
 			if(f==NULL){
 				printf("\n%sError opening role file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
@@ -258,6 +318,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--log-file")==0){
+			if(i+1>=argc){
+				printf("\n%s--log-file: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			FILE *f=fopen(argv[i+1],"a");
 			if(f==NULL){
 				printf("\n%sError opening/creating log file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
@@ -268,6 +332,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--save-messages-to")==0){
+			if(i+1>=argc){
+				printf("\n%s--save-messages-to: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			FILE *f=fopen(argv[i+1],"a");
 			if(f==NULL){
 				printf("\n%sError opening/creating save-messages file. Error %d: %s%s\n\n",C_HRED,errno,strerror(errno),C_DEFAULT);
@@ -283,6 +351,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--message")==0){
+			if(i+1>=argc){
+				printf("\n%s--message: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			message=argv[i+1];
 			continue;
 		}
@@ -317,6 +389,10 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if(strcmp(argv[i],"--tts")==0){
+			if(i+1>=argc){
+				printf("\n%s--tts: option argument missing.%s\n\n",C_HRED,C_DEFAULT);
+				exit(EXIT_FAILURE);
+			}
 			if(espeak_Initialize(AUDIO_OUTPUT_PLAYBACK, 0, NULL, 0)!=-1){
 				textToSpeech=TRUE;
 				char setVoice[64]="";
@@ -343,8 +419,9 @@ int main(int argc, char *argv[]) {
 	}
 	ChatGPT cgpt;
 	int resp=0;
-	if((resp=libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, temperature, maxContextMessages))!=RETURN_OK){
-		printf("\n%sError init structure. %s%s\n\n",C_HRED,libGPT_error(resp),C_DEFAULT);
+	if((resp=libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, freqPenalty, temperature,
+			n, maxContextMessages))!=RETURN_OK){
+		printf("\n%sInitialization error. %s%s\n\n",C_HRED,libGPT_error(resp),C_DEFAULT);
 		exit(EXIT_FAILURE);
 	}
 	if(sessionFile!=NULL){

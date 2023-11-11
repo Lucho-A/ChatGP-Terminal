@@ -2,12 +2,12 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.1.9
+ Version     : 1.2.0
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
- */
+*/
 
 #include "libGPT.h"
 
@@ -254,7 +254,6 @@ int libGPT_import_session_file(char *sessionFile){
 	return RETURN_OK;
 }
 
-
 int libGPT_save_message(char *saveMessagesTo, bool csvFormat){
 	if(historyContext==NULL) return LIBGPT_NO_HISTORY_CONTEXT_ERROR;
 	FILE *f=fopen(saveMessagesTo,"a");
@@ -346,11 +345,29 @@ char * libGPT_error(int error){
 	case LIBGPT_OPENING_FILE_ERROR:
 		snprintf(libGPTError, 1024,"Error opening file. %s", strerror(errno));
 		break;
+	case LIBGPT_OPENING_ROLE_FILE_ERROR:
+		snprintf(libGPTError, 1024,"Error opening 'Role' file. %s", strerror(errno));
+		break;
 	case LIBGPT_NO_HISTORY_CONTEXT_ERROR:
 		snprintf(libGPTError, 1024,"No message to save. ");
 		break;
 	case LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR:
 		snprintf(libGPTError, 1024,"Unexpected JSON format error. ");
+		break;
+	case LIBGPT_FREQ_PENALTY_ERROR:
+		snprintf(libGPTError, 1024,"'Frequency Penalty' value out-of-boundaries. ");
+		break;
+	case LIBGPT_TEMPERATURE_ERROR:
+		snprintf(libGPTError, 1024,"'Temperature' value out-of-boundaries. ");
+		break;
+	case LIBGPT_N_ERROR:
+		snprintf(libGPTError, 1024,"'N' value out-of-boundaries. ");
+		break;
+	case LIBGPT_MAX_TOKENS_ERROR:
+		snprintf(libGPTError, 1024,"'Max. Tokens' value out-of-boundaries. ");
+		break;
+	case LIBGPT_CONTEXT_MSGS_ERROR:
+		snprintf(libGPTError, 1024,"'Max. Context Message' value out-of-boundaries. ");
 		break;
 	default:
 		snprintf(libGPTError, 1024,"Error not handled. ");
@@ -360,7 +377,7 @@ char * libGPT_error(int error){
 }
 
 int libGPT_clean(ChatGPT *cgpt){
-	if(cgpt->api!=NULL) free(cgpt->api);
+	if(cgpt->apiKey!=NULL) free(cgpt->apiKey);
 	if(cgpt->systemRole!=NULL && cgpt->systemRole[0]!=0) free(cgpt->systemRole);
 	libGPT_flush_history();
 	return RETURN_OK;
@@ -374,16 +391,20 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 	return RETURN_OK;
 }
 
-int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long int maxTokens, double temperature, int maxContextMessage){
+int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long int maxTokens,
+		double freqPenalty, double temperature, int n, int maxContextMessage){
 	SSL_library_init();
-	if(maxTokens==0) maxTokens=LIBGPT_DEFAULT_MAX_TOKENS;
-	if(temperature==0) temperature=LIBGPT_DEFAULT_TEMPERATURE;
-	cgpt->api=malloc(strlen(api)+1);
-	if(cgpt->api ==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(cgpt->api,strlen(api)+1,"%s",api);
+	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
+	if(maxTokens<LIBGPT_MIN_MAX_TOKENS) return LIBGPT_MAX_TOKENS_ERROR;
+	if(freqPenalty<LIBGPT_MIN_FREQ_PENALTY || freqPenalty>LIBGPT_MAX_FREQ_PENALTY) return LIBGPT_FREQ_PENALTY_ERROR;
+	if(temperature<LIBGPT_MIN_TEMPERATURE || temperature>LIBGPT_MAX_TEMPERATURE) return LIBGPT_TEMPERATURE_ERROR;
+	if(n<LIBGPT_MIN_N || n>LIBGPT_MAX_N) return LIBGPT_N_ERROR;
+	cgpt->apiKey=malloc(strlen(api)+1);
+	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
+	snprintf(cgpt->apiKey,strlen(api)+1,"%s",api);
 	if(roleFile!=NULL){
 		FILE *f=fopen(roleFile,"r");
-		if(f==NULL) return LIBGPT_OPENING_FILE_ERROR;
+		if(f==NULL) return LIBGPT_OPENING_ROLE_FILE_ERROR;
 		char *line=NULL;
 		size_t len=0;
 		ssize_t chars=0;
@@ -418,7 +439,9 @@ int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long
 		}
 	}
 	cgpt->maxTokens=maxTokens;
+	cgpt->frequencyPenalty=freqPenalty;
 	cgpt->temperature=temperature;
+	cgpt->n=n;
 	maxHistoryContext=maxContextMessage;
 	return RETURN_OK;
 }
@@ -561,6 +584,7 @@ static int get_http(char *url,char *payload, char **bufferHTTP){
 	}while(TRUE);
 	clean_ssl(sslConn);
 	SSL_CTX_free(sslCtx);
+	if(totalBytesReceived==0) return LIBGPT_ZEROBYTESRECV_ERROR;
 	return totalBytesReceived;
 }
 
@@ -648,15 +672,19 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"%s"
 			"],"
 			"\"max_tokens\": %ld,"
+			"\"n\": %d,"
+			"\"frequency_penalty\": %.2f,"
 			"\"temperature\": %.2f"
 			"}";
-	len=strlen(template)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)+sizeof(cgpt.temperature);
+	len=strlen(template)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)
+		+sizeof(cgpt.n) + sizeof(cgpt.frequencyPenalty)+sizeof(cgpt.temperature);
 	char *payload=malloc(len);
 	if(payload==NULL){
 		free(messageParsed);
 		return LIBGPT_MALLOC_ERROR;
 	}
-	snprintf(payload,len,template,cgpt.systemRole,context,cgpt.maxTokens,cgpt.temperature);
+	snprintf(payload,len,template,cgpt.systemRole,context,cgpt.maxTokens,
+			cgpt.n,cgpt.frequencyPenalty,cgpt.temperature);
 	free(context);
 	template="POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"
@@ -667,24 +695,33 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"connection: close\r\n"
 			"content-length: %ld\r\n\r\n"
 			"%s";
-	len=strlen(template)+strlen(OPENAI_API_URL)+strlen(cgpt.api)+sizeof(size_t)+strlen(payload);
+	len=strlen(template)+strlen(OPENAI_API_URL)+strlen(cgpt.apiKey)+sizeof(size_t)+strlen(payload);
 	char *httpMsg=malloc(len);
 	if(httpMsg==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(httpMsg,len,template,OPENAI_API_URL,cgpt.api,strlen(payload),payload);
+	snprintf(httpMsg,len,template,OPENAI_API_URL,cgpt.apiKey,strlen(payload),payload);
 	free(payload);
 	char *bufferHTTP=NULL;
-	int totalBytesReceived=get_http(OPENAI_API_URL, httpMsg,&bufferHTTP);
+	int resp=get_http(OPENAI_API_URL, httpMsg,&bufferHTTP);
 	free(httpMsg);
-	if(totalBytesReceived==0){
+	if(resp<=0){
 		free(messageParsed);
 		free(bufferHTTP);
-		return LIBGPT_ZEROBYTESRECV_ERROR;
+		return resp;
 	}
 	cgptResponse->httpResponse=malloc(strlen(bufferHTTP)+1);
 	memset(cgptResponse->httpResponse,0,strlen(bufferHTTP)+1);
 	snprintf(cgptResponse->httpResponse,strlen(bufferHTTP)+1,"%s",bufferHTTP);
 	free(bufferHTTP);
 	return parse_result(messageParsed, cgptResponse);
+}
+
+//TODO to be removed (for debugging/performance-evaluation)
+void dbg(char *msg){
+	time_t timestamp = time(NULL);
+	struct tm tm = *localtime(&timestamp);
+	char strTimeStamp[50]="";
+	snprintf(strTimeStamp,sizeof(strTimeStamp),"%02d:%02d:%02d",tm.tm_hour, tm.tm_min, tm.tm_sec);
+	printf("\n\e[0;31m%s: %s\e[0m\n",msg,strTimeStamp);
 }
 
 

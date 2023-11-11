@@ -1,3 +1,19 @@
+#### v1.2.0:2023XXXX (Under-Dev/Testing)
+
+- SHA2-256(chatgp-terminal_1.2_0.deb)=
+- SHA2-256(chatgp-terminal_1.2_0.tar.gz)=
+
+Features:
+- Added option '--freq-penalty'. Allow to incorporate a 'Frequency Penalty' (-2.0 to 2.0) value. Default 0.0.
+- Added option '--n'. Allow to incorporate an 'N' (1 to 20) value. Default 1.
+
+Bug-Fixed:
+- fixed segmentation fault when option argument is missing
+- fixed input errors & validations handling
+
+Others:
+- code optimized, minor changes & code cleaned-up
+
 #### v1.1.9:20231110
 
 - SHA2-256(chatgp-terminal_1.1_9.deb)=6e3752a20eefcba4effcc8e5ef9f651700b0d98544c9a2c4fc798f245f7ae260
