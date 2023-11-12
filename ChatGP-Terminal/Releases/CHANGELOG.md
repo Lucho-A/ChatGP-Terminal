@@ -1,12 +1,12 @@
-#### v1.2.0:2023XXXX (Under-Dev/Testing)
+#### v1.2.0:20231111
 
-- SHA2-256(chatgp-terminal_1.2_0.deb)=
-- SHA2-256(chatgp-terminal_1.2_0.tar.gz)=
+- SHA2-256(chatgp-terminal_1.2_0.deb)=7c0f52474e00b4dfa109bd5c8b021516ebf153d842c7fd38afee4cfae42f0386
+- SHA2-256(chatgp-terminal_1.2_0.tar.gz)=3e210be9c76024ae6e8b9b9a0c9a96b5058200e354832293795f597d36490bf8
 
 Features:
 - Added option '--freq-penalty'. Allow to incorporate a 'Frequency Penalty' (-2.0 to 2.0) value. Default 0.0.
 - Added option '--n'. Allow to incorporate an 'N' (1 to 20) value. Default 1.
-- Now, is it possible to change some parameters 'on-the-fly' (I find it useful when a response doesn't fulfill my expectations and I want to query again). Namely:
+- Now, it's possible to prompt and change some parameters 'on-the-fly' (I find it useful when a response doesn't fulfill my expectations and I want to query again). Namely:
     - 'n; [value]' // for N parameter
     - 'fp;[value]' // for Frequency Penalty parameter
     - 'mt;[value]' // for Max. Tokens parameter
