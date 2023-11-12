@@ -58,9 +58,6 @@ I'm using this way right now, and works pretty smoothly:
 chatgp-terminal --apikeyfile ~/.cgpt/.cgpt.key --check-status --max-context-messages 5 --max-tokens 2048 --role-file ~/.cgpt/cgpt.role --session-file ~/.cgpt/.cgpt.session --save-messages-to ~/.cgpt/cgpt.msg --log-file ~/.cgpt/cgpt.log
 ```
 
-![Screenshot_20231110_135329-v2](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/2e336d4b-4027-444b-aeb4-5ea154758347)
-
-
 Into the man page you can find others.
 
 ### Screenshots:

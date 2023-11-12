@@ -6,12 +6,20 @@
 Features:
 - Added option '--freq-penalty'. Allow to incorporate a 'Frequency Penalty' (-2.0 to 2.0) value. Default 0.0.
 - Added option '--n'. Allow to incorporate an 'N' (1 to 20) value. Default 1.
+- Now, is it possible to change some parameters 'on-the-fly' (I find it useful when a response doesn't fulfill my expectations and I want to query again). Namely:
+    - 'n; [value]' // for N parameter
+    - 'fp;[value]' // for Frequency Penalty parameter
+    - 'mt;[value]' // for Max. Tokens parameter
+    - 't; [value]' // for Temperature parameter
+
+    If value is empty, the parameter adopts the value assigned when the program started (session default value).
 
 Bug-Fixed:
 - fixed segmentation fault when option argument is missing
 - fixed input errors & validations handling
 
 Others:
+- Input cost updated: 0.0010
 - code optimized, minor changes & code cleaned-up
 
 #### v1.1.9:20231110

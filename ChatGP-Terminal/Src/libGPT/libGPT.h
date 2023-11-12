@@ -42,8 +42,8 @@
 #define	LIBGPT_MIN_CONTEXT_MSGS				0
 #define	LIBGPT_DEFAULT_MAX_CONTEXT_MSGS		3
 
-#define	LIBGPT_PROMPT_COST					0.0015
-#define	LIBGPT_COMPLETION_COST				0.002
+#define	LIBGPT_PROMPT_COST					0.0010
+#define	LIBGPT_COMPLETION_COST				0.0020
 
 #define DBG									dbg("WTFFF?!?!");
 
@@ -102,6 +102,10 @@ typedef struct ChatGPTResponse{
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, char *, long int, double, double, int, int);
+int libGPT_set_max_tokens(ChatGPT *, long int);
+int libGPT_set_n(ChatGPT *, int);
+int libGPT_set_frequency_penalty(ChatGPT *, double);
+int libGPT_set_temperature(ChatGPT *, double);
 int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);

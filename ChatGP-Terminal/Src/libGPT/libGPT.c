@@ -391,14 +391,39 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 	return RETURN_OK;
 }
 
+int libGPT_set_max_tokens(ChatGPT *cgpt, long int maxTokens){
+	if(maxTokens<LIBGPT_MIN_MAX_TOKENS) return LIBGPT_MAX_TOKENS_ERROR;
+	cgpt->maxTokens=maxTokens;
+	return RETURN_OK;
+}
+
+int libGPT_set_n(ChatGPT *cgpt, int n){
+	if(n<LIBGPT_MIN_N || n>LIBGPT_MAX_N) return LIBGPT_N_ERROR;
+	cgpt->n=n;
+	return RETURN_OK;
+}
+
+int libGPT_set_frequency_penalty(ChatGPT *cgpt, double fp){
+	if(fp<LIBGPT_MIN_FREQ_PENALTY || fp>LIBGPT_MAX_FREQ_PENALTY) return LIBGPT_FREQ_PENALTY_ERROR;
+	cgpt->frequencyPenalty=fp;
+	return RETURN_OK;
+}
+
+int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
+	if(temperature<LIBGPT_MIN_TEMPERATURE || temperature>LIBGPT_MAX_TEMPERATURE) return LIBGPT_TEMPERATURE_ERROR;
+	cgpt->temperature=temperature;
+	return RETURN_OK;
+}
+
 int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long int maxTokens,
 		double freqPenalty, double temperature, int n, int maxContextMessage){
 	SSL_library_init();
 	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
-	if(maxTokens<LIBGPT_MIN_MAX_TOKENS) return LIBGPT_MAX_TOKENS_ERROR;
-	if(freqPenalty<LIBGPT_MIN_FREQ_PENALTY || freqPenalty>LIBGPT_MAX_FREQ_PENALTY) return LIBGPT_FREQ_PENALTY_ERROR;
-	if(temperature<LIBGPT_MIN_TEMPERATURE || temperature>LIBGPT_MAX_TEMPERATURE) return LIBGPT_TEMPERATURE_ERROR;
-	if(n<LIBGPT_MIN_N || n>LIBGPT_MAX_N) return LIBGPT_N_ERROR;
+	int resp=0;
+	if((resp=libGPT_set_max_tokens(cgpt,maxTokens))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_frequency_penalty(cgpt,freqPenalty))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_temperature(cgpt,temperature))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_n(cgpt,n))!=RETURN_OK) return resp;
 	cgpt->apiKey=malloc(strlen(api)+1);
 	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(cgpt->apiKey,strlen(api)+1,"%s",api);
@@ -721,7 +746,7 @@ void dbg(char *msg){
 	struct tm tm = *localtime(&timestamp);
 	char strTimeStamp[50]="";
 	snprintf(strTimeStamp,sizeof(strTimeStamp),"%02d:%02d:%02d",tm.tm_hour, tm.tm_min, tm.tm_sec);
-	printf("\n\e[0;31m%s: %s\e[0m\n",msg,strTimeStamp);
+	printf("\n\e[0;31m%s: \n\n%s\e[0m\n",strTimeStamp,msg);
 }
 
 
