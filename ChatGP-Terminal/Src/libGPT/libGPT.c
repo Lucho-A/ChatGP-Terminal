@@ -382,6 +382,7 @@ int libGPT_clean(ChatGPT *cgpt){
 }
 
 int libGPT_clean_response(ChatGPTResponse *cgptResponse){
+	if(cgptResponse->model!=NULL) free(cgptResponse->model);
 	if(cgptResponse->httpResponse!=NULL) free(cgptResponse->httpResponse);
 	if(cgptResponse->content!=NULL) free(cgptResponse->content);
 	if(cgptResponse->contentFormatted!=NULL) free(cgptResponse->contentFormatted);
