@@ -2,12 +2,12 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.2.0
+ Version     : 1.2.1
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
  ============================================================================
-*/
+ */
 
 #include "libGPT.h"
 
@@ -174,6 +174,13 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 	free(buffer);
+
+	if(get_string_from_token(cgptResponse->httpResponse,"\"model\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->model=malloc(strlen(buffer)+1);
+	memset(cgptResponse->model,0,strlen(buffer)+1);
+	snprintf(cgptResponse->model,strlen(buffer)+1,"%s", buffer);
+	free(buffer);
+
 	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
 	cgptResponse->created=strtol(buffer,NULL,10);
 	free(buffer);
@@ -205,8 +212,11 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
-
+	if(strstr(cgptResponse->model,"gpt-4")){
+		cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_4_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_4_COMPLETION_COST;
+	}else{
+		cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
+	}
 	return RETURN_OK;
 }
 
@@ -354,18 +364,6 @@ char * libGPT_error(int error){
 	case LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR:
 		snprintf(libGPTError, 1024,"Unexpected JSON format error. ");
 		break;
-	case LIBGPT_FREQ_PENALTY_ERROR:
-		snprintf(libGPTError, 1024,"'Frequency Penalty' value out-of-boundaries. ");
-		break;
-	case LIBGPT_TEMPERATURE_ERROR:
-		snprintf(libGPTError, 1024,"'Temperature' value out-of-boundaries. ");
-		break;
-	case LIBGPT_N_ERROR:
-		snprintf(libGPTError, 1024,"'N' value out-of-boundaries. ");
-		break;
-	case LIBGPT_MAX_TOKENS_ERROR:
-		snprintf(libGPTError, 1024,"'Max. Tokens' value out-of-boundaries. ");
-		break;
 	case LIBGPT_CONTEXT_MSGS_ERROR:
 		snprintf(libGPTError, 1024,"'Max. Context Message' value out-of-boundaries. ");
 		break;
@@ -392,38 +390,45 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 }
 
 int libGPT_set_max_tokens(ChatGPT *cgpt, long int maxTokens){
-	if(maxTokens<LIBGPT_MIN_MAX_TOKENS) return LIBGPT_MAX_TOKENS_ERROR;
 	cgpt->maxTokens=maxTokens;
 	return RETURN_OK;
 }
 
 int libGPT_set_n(ChatGPT *cgpt, int n){
-	if(n<LIBGPT_MIN_N || n>LIBGPT_MAX_N) return LIBGPT_N_ERROR;
 	cgpt->n=n;
 	return RETURN_OK;
 }
 
 int libGPT_set_frequency_penalty(ChatGPT *cgpt, double fp){
-	if(fp<LIBGPT_MIN_FREQ_PENALTY || fp>LIBGPT_MAX_FREQ_PENALTY) return LIBGPT_FREQ_PENALTY_ERROR;
 	cgpt->frequencyPenalty=fp;
 	return RETURN_OK;
 }
 
+int libGPT_set_presence_penalty(ChatGPT *cgpt, double pp){
+	cgpt->presencePenalty=pp;
+	return RETURN_OK;
+}
+
 int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
-	if(temperature<LIBGPT_MIN_TEMPERATURE || temperature>LIBGPT_MAX_TEMPERATURE) return LIBGPT_TEMPERATURE_ERROR;
 	cgpt->temperature=temperature;
 	return RETURN_OK;
 }
 
-int libGPT_init(ChatGPT *cgpt, char *api, char *systemRole, char *roleFile, long int maxTokens,
-		double freqPenalty, double temperature, int n, int maxContextMessage){
+int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *roleFile, long int maxTokens,
+		double freqPenalty, double presPenalty, double temperature, int n, int maxContextMessage){
 	SSL_library_init();
 	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
+	if(model==NULL) model="";
+	if(api==NULL) api="";
 	int resp=0;
 	if((resp=libGPT_set_max_tokens(cgpt,maxTokens))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_frequency_penalty(cgpt,freqPenalty))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_presence_penalty(cgpt,presPenalty))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_temperature(cgpt,temperature))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_n(cgpt,n))!=RETURN_OK) return resp;
+	cgpt->model=malloc(strlen(model)+1);
+	if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
+	snprintf(cgpt->model,strlen(model)+1,"%s",model);
 	cgpt->apiKey=malloc(strlen(api)+1);
 	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(cgpt->apiKey,strlen(api)+1,"%s",api);
@@ -637,6 +642,7 @@ int libGPT_get_service_status(char **statusDescription){
 }
 
 int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message){
+	cgptResponse->model=NULL;
 	cgptResponse->created=0;
 	cgptResponse->httpResponse=NULL;
 	cgptResponse->content=NULL;
@@ -690,7 +696,7 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	strcat(context,buf);
 	free(buf);
 	template="{"
-			"\"model\":\"gpt-3.5-turbo\","
+			"\"model\":\"%s\","
 			"\"messages\":"
 			"["
 			"{\"role\":\"system\",\"content\":\"%s\"},"
@@ -699,17 +705,18 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"\"max_tokens\": %ld,"
 			"\"n\": %d,"
 			"\"frequency_penalty\": %.2f,"
+			"\"presence_penalty\": %.2f,"
 			"\"temperature\": %.2f"
 			"}";
-	len=strlen(template)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)
-		+sizeof(cgpt.n) + sizeof(cgpt.frequencyPenalty)+sizeof(cgpt.temperature);
+	len=strlen(template)+strlen(cgpt.model)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)
+				+sizeof(cgpt.n) + sizeof(cgpt.frequencyPenalty)+ sizeof(cgpt.presencePenalty)+sizeof(cgpt.temperature);
 	char *payload=malloc(len);
 	if(payload==NULL){
 		free(messageParsed);
 		return LIBGPT_MALLOC_ERROR;
 	}
-	snprintf(payload,len,template,cgpt.systemRole,context,cgpt.maxTokens,
-			cgpt.n,cgpt.frequencyPenalty,cgpt.temperature);
+	snprintf(payload,len,template,cgpt.model,cgpt.systemRole,context,cgpt.maxTokens,
+			cgpt.n,cgpt.frequencyPenalty,cgpt.presencePenalty,cgpt.temperature);
 	free(context);
 	template="POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"

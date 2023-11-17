@@ -1,3 +1,19 @@
+#### v1.2.1:202311XX (Under-Dev./Testing)
+
+- SHA2-256(chatgp-terminal_1.2_0.deb)=
+- SHA2-256(chatgp-terminal_1.2_0.tar.gz)=
+
+Features:
+- _(beta)_ Added option '--gpt-4'. No argument required. If the option is specified, 'gpt-4' model will be used.
+- Added option '--pres-penalty'. It allows to incorporate a 'Presence Penalty' value. Default 0.0.
+- Added option 'pp;[value]' when prompting, in order to change the 'presence penalty' parameter. An empty value assign the 'session value'.
+- Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
+
+Others:
+- in order to simplify code, and better maintenance/scalability, the parameter's values validation (boundaries) are done in server side.
+- added costs associated with gpt-4 model (i: 0.03, o:0.06)
+- minor changes & code cleaned-up
+
 #### v1.2.0:20231111
 
 - SHA2-256(chatgp-terminal_1.2_0.deb)=7c0f52474e00b4dfa109bd5c8b021516ebf153d842c7fd38afee4cfae42f0386
@@ -7,12 +23,12 @@ Features:
 - Added option '--freq-penalty'. Allow to incorporate a 'Frequency Penalty' (-2.0 to 2.0) value. Default 0.0.
 - Added option '--n'. Allow to incorporate an 'N' (1 to 20) value. Default 1.
 - Now, it's possible to prompt and change some parameters 'on-the-fly' (I find it useful when a response doesn't fulfill my expectations and I want to query again). Namely:
-    - 'n; [value]' // for N parameter
+    - 'n;[value]'  // for N parameter
     - 'fp;[value]' // for Frequency Penalty parameter
     - 'mt;[value]' // for Max. Tokens parameter
-    - 't; [value]' // for Temperature parameter
+    - 't;[value]'  // for Temperature parameter
 
-    If value is empty, the parameter adopts the value assigned when the program started (session default value).
+    If value is empty, the parameter adopts the value assigned when the program started (session value).
 
 Bug-Fixed:
 - fixed segmentation fault when option argument is missing

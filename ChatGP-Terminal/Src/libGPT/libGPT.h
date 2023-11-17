@@ -18,32 +18,29 @@
 #define LIBGPT_NAME 						"libGPT"
 #define LIBGPT_MAJOR_VERSION				"1"
 #define LIBGPT_MINOR_VERSION				"2"
-#define LIBGPT_MICRO_VERSION				"0"
+#define LIBGPT_MICRO_VERSION				"1"
 #define LIBGPT_VERSION						PROGRAM_MAJOR_VERSION"."PROGRAM_MINOR_VERSION"."PROGRAM_MICRO_VERSION
 #define LIBGPT_DESCRIPTION					"C Library for ChatGPT"
 
+#define LIBGPT_DEFAULT_MODEL				"gpt-3.5-turbo"
+
 #define	LIBGPT_DEFAULT_ROLE					""
 
-#define	LIBGPT_MIN_MAX_TOKENS				10
 #define	LIBGPT_DEFAULT_MAX_TOKENS			1024
 
-#define	LIBGPT_MIN_FREQ_PENALTY				-2.0
 #define	LIBGPT_DEFAULT_FREQ_PENALTY			0.0
-#define	LIBGPT_MAX_FREQ_PENALTY				2.0
-
-#define	LIBGPT_MIN_TEMPERATURE				0.0
+#define	LIBGPT_DEFAULT_PRES_PENALTY			0.0
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
-#define	LIBGPT_MAX_TEMPERATURE				2.0
-
-#define	LIBGPT_MIN_N						1
 #define	LIBGPT_DEFAULT_N					1
-#define	LIBGPT_MAX_N						20
 
 #define	LIBGPT_MIN_CONTEXT_MSGS				0
 #define	LIBGPT_DEFAULT_MAX_CONTEXT_MSGS		3
 
-#define	LIBGPT_PROMPT_COST					0.0010
-#define	LIBGPT_COMPLETION_COST				0.0020
+#define	LIBGPT_PROMPT_COST					0.001
+#define	LIBGPT_COMPLETION_COST				0.002
+
+#define	LIBGPT_4_PROMPT_COST				0.03
+#define	LIBGPT_4_COMPLETION_COST			0.06
 
 #define DBG									dbg("WTFFF?!?!");
 
@@ -73,23 +70,22 @@ enum errors{
 	LIBGPT_OPENING_ROLE_FILE_ERROR,
 	LIBGPT_NO_HISTORY_CONTEXT_ERROR,
 	LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR,
-	LIBGPT_FREQ_PENALTY_ERROR,
-	LIBGPT_TEMPERATURE_ERROR,
-	LIBGPT_N_ERROR,
-	LIBGPT_MAX_TOKENS_ERROR,
 	LIBGPT_CONTEXT_MSGS_ERROR
 };
 
 typedef struct ChatGPT{
+	char *model;
 	char *apiKey;
 	char *systemRole;
 	long int maxTokens;
 	double frequencyPenalty;
+	double presencePenalty;
 	double temperature;
 	int n;
 }ChatGPT;
 
 typedef struct ChatGPTResponse{
+	char *model;
 	long created;
 	char *httpResponse;
 	char *content;
@@ -101,10 +97,11 @@ typedef struct ChatGPTResponse{
 	double cost;
 }ChatGPTResponse;
 
-int libGPT_init(ChatGPT *, char *, char *, char *, long int, double, double, int, int);
+int libGPT_init(ChatGPT *, char *, char *, char *, char *, long int, double, double, double, int, int);
 int libGPT_set_max_tokens(ChatGPT *, long int);
 int libGPT_set_n(ChatGPT *, int);
 int libGPT_set_frequency_penalty(ChatGPT *, double);
+int libGPT_set_presence_penalty(ChatGPT *, double);
 int libGPT_set_temperature(ChatGPT *, double);
 int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);

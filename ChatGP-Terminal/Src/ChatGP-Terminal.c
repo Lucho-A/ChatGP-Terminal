@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ChatGP-Terminal.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.2.0
+ Version     : 1.2.1
  Created on	 : 2023/07/18 (v1.0.0)
  Copyright   : GNU General Public License v3.0
  Description : Main file
@@ -23,7 +23,7 @@
 #include "libGPT/libGPT.h"
 
 #define PROGRAM_NAME					"ChatGP-Terminal"
-#define PROGRAM_VERSION					"1.2.0"
+#define PROGRAM_VERSION					"1.2.1"
 #define PROGRAM_URL						"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT					"<https://lucho-a.github.io/>"
 
@@ -98,8 +98,9 @@ void *speech_response(void *args){
 	pthread_exit(NULL);
 }
 
-void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showFinishReason, bool showPromptTokens,
-		bool showCompletionTokens, bool showTotalTokens, bool showCost){
+void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showModel,
+		bool showFinishReason, bool showPromptTokens,bool showCompletionTokens, bool showTotalTokens,
+		bool showCost){
 	char *defColor=(responseVelocity==0)?"":C_DEFAULT, *respColor=(responseVelocity==0)?"":C_YELLOW;
 	if(responseVelocity==0){
 		printf("%s",cgptResponse->contentFormatted);
@@ -112,6 +113,7 @@ void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bo
 		}
 	}
 	printf("\n");
+	if(showModel) printf("%s\nModel: %s%s\n",defColor,respColor, cgptResponse->model);
 	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",defColor,respColor,cgptResponse->finishReason);
 	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",defColor,respColor);
 	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",defColor,respColor, cgptResponse->promptTokens);
@@ -148,8 +150,9 @@ void check_service_status(){
 	return;
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showFinishedStatus, bool showPromptTokens,
-		bool showCompletionTokens, bool showTotalTokens, bool showCost, bool tts, char *logFile, bool checkStatus){
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showModel, bool showFinishedStatus,
+		bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens, bool showCost,
+		bool tts, char *logFile, bool checkStatus){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, &cgptResponse, message))!=RETURN_OK){
@@ -170,7 +173,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			pthread_t threadSpeechMessage;
 			pthread_create(&threadSpeechMessage, NULL, speech_response, (void*)cgptResponse.contentFormatted);
 		}
-		print_response(&cgptResponse, responseVelocity, showFinishedStatus, showPromptTokens, showCompletionTokens,showTotalTokens,showCost);
+		print_response(&cgptResponse, responseVelocity, showModel, showFinishedStatus, showPromptTokens, showCompletionTokens,showTotalTokens,showCost);
 		if(logFile!=NULL){
 			if(log_response(cgptResponse, logFile)!=RETURN_OK) print_error("Error logging file. ",strerror(errno),FALSE);
 		}
@@ -181,13 +184,13 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
 	char *apikey="", *role=NULL, *message=NULL, *saveMessagesTo="", *sessionFile=NULL, *roleFile=NULL,
-			*logFile=NULL;
+			*logFile=NULL, *model=LIBGPT_DEFAULT_MODEL;
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY,
 			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS, n=LIBGPT_DEFAULT_N;
 	bool checkStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,
-			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE,showCost=FALSE;
-	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY, temperature=LIBGPT_DEFAULT_TEMPERATURE;
+			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE,showCost=FALSE, showModel=FALSE;
+	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY, presPenalty=LIBGPT_DEFAULT_PRES_PENALTY, temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
 		if(strcmp(argv[i],"--version")==0){
@@ -223,6 +226,12 @@ int main(int argc, char *argv[]) {
 			if(i+1>=argc) print_error("--freq-penalty: option argument missing. ","",TRUE);
 			freqPenalty=strtod(argv[i+1],&tail);
 			if(*tail!='\0') print_error("'Frequency Penalty' value not valid. ","",TRUE);
+			continue;
+		}
+		if(strcmp(argv[i],"--pres-penalty")==0){
+			if(i+1>=argc) print_error("--pres-penalty: option argument missing. ","",TRUE);
+			presPenalty=strtod(argv[i+1],&tail);
+			if(*tail!='\0') print_error("'Presence Penalty' value not valid. ","",TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--temperature")==0){
@@ -291,8 +300,23 @@ int main(int argc, char *argv[]) {
 			message=argv[i+1];
 			continue;
 		}
+		if(strcmp(argv[i],"--gpt-4")==0){
+			model="gpt-4";
+			i--;
+			continue;
+		}
+		/*if(strcmp(argv[i],"--gpt-4-32k")==0){
+			model="gpt-4-32k";
+			i--;
+			continue;
+		}*/
 		if(strcmp(argv[i],"--check-status")==0){
 			checkStatus=TRUE;
+			i--;
+			continue;
+		}
+		if(strcmp(argv[i],"--show-model")==0){
+			showModel=TRUE;
 			i--;
 			continue;
 		}
@@ -346,7 +370,7 @@ int main(int argc, char *argv[]) {
 	}
 	ChatGPT cgpt;
 	int resp=0;
-	if((resp=libGPT_init(&cgpt, apikey, role, roleFile, maxTokens, freqPenalty, temperature,
+	if((resp=libGPT_init(&cgpt, model, apikey, role, roleFile, maxTokens, freqPenalty, presPenalty, temperature,
 			n, maxContextMessages))!=RETURN_OK){
 		print_error("Initialization error. ",libGPT_error(resp),TRUE);
 	}
@@ -354,7 +378,7 @@ int main(int argc, char *argv[]) {
 		if((resp=libGPT_import_session_file(sessionFile))!=RETURN_OK) print_error("Error importing session file. ",libGPT_error(resp),FALSE);
 	}
 	if(message!=NULL){
-		send_chat(cgpt, message, 0, showFinishedStatus, showPromptTokens, showCompletionTokens,
+		send_chat(cgpt, message, 0, showModel, showFinishedStatus, showPromptTokens, showCompletionTokens,
 				showTotalTokens, showCost, FALSE, logFile, checkStatus);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
@@ -432,6 +456,20 @@ int main(int argc, char *argv[]) {
 			if((resp=libGPT_set_frequency_penalty(&cgpt, lfreqPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
 		}
+		if(strstr(messagePrompted,"pp;")==messagePrompted){
+			char arg[16]="";
+			for(int i=strlen("pp;");i<strlen(messagePrompted) && i<16;i++) arg[i-strlen("pp;")]=messagePrompted[i];
+			char *tail=NULL;
+			double lpresPenalty=strtod(arg,&tail);
+			if(*tail!='\0'){
+				print_error("'Presence Penalty' value not valid.","",FALSE);
+				continue;
+			}
+			if (arg[0]==0) lpresPenalty=presPenalty;
+			int resp=0;
+			if((resp=libGPT_set_presence_penalty(&cgpt, lpresPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
+			continue;
+		}
 		if(strstr(messagePrompted,"t;")==messagePrompted){
 			char arg[16]="";
 			for(int i=strlen("t;");i<strlen(messagePrompted) && i<16;i++) arg[i-strlen("t;")]=messagePrompted[i];
@@ -446,7 +484,7 @@ int main(int argc, char *argv[]) {
 			if((resp=libGPT_set_temperature(&cgpt, ltemperature))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
 		}
-		send_chat(cgpt, messagePrompted, responseVelocity, showFinishedStatus, showPromptTokens,
+		send_chat(cgpt, messagePrompted, responseVelocity, showModel, showFinishedStatus, showPromptTokens,
 				showCompletionTokens, showTotalTokens, showCost, textToSpeech,logFile, checkStatus);
 		add_history(messagePrompted);
 	}while(TRUE);
