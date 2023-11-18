@@ -18,7 +18,7 @@ Others:
 - '--log-file' adds to log the model used in the response (and the cost is not longer logged).
 - minor changes & code cleaned-up
 
-(1) although ur expecting chatgpt write a novel by you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
+(1) although ur expecting chatgpt write a novel for you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
 
 #### v1.2.0:20231111
 
