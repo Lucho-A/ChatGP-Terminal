@@ -62,10 +62,14 @@ Into the man page you can find others.
 
 ### Screenshots:
 
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/7cde0eab-3ace-4c61-b68c-2a93b90d7f80)
+
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/721de418-ebee-47f4-b64a-29df0d538de2)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/55fba370-3e21-4a1c-a934-3c3e701068b4)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/b8746769-496a-4eb2-9586-d0a94b995075)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/9a6565dd-f05a-4464-8391-1f1f1a1ecd9a)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/6291c499-6155-4880-9c99-a85b8e8cac62)
 
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/155870d5-5a4f-449e-81f6-f7e468fdf404)
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/21a6dfe7-3f17-4b12-8b8d-968e7846847c)
+
+![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/890ffa17-6120-43f7-ae4d-8c18d272ca95)
