@@ -27,24 +27,39 @@
 #define PROGRAM_URL						"https://github.com/lucho-a/chatgp-terminal"
 #define PROGRAM_CONTACT					"<https://lucho-a.github.io/>"
 
-#define C_YELLOW 						"\e[0;33m"
-#define C_HGREEN 						"\e[0;92m"
-#define C_HRED 							"\e[0;91m"
-#define C_HCYAN 						"\e[0;96m"
-#define C_HWHITE 						"\e[0;97m"
-#define C_DEFAULT 						"\e[0m"
-
 #define PROMPT_DEFAULT					"-> "
-#define BANNER 							printf("\n%s%s v%s by L. <%s>%s\n\n",C_HWHITE,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,C_DEFAULT);
+#define BANNER 							printf("\n%s%s v%s by L. <%s>%s\n\n",Colors.h_white,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,Colors.def);
 
-#define	DEFAULT_RESPONSE_VELOCITY		10000
+#define	DEFAULT_RESPONSE_VELOCITY		25000
+
+struct Colors{
+	char *yellow;
+	char *h_green;
+	char *h_red;
+	char *h_cyan;
+	char *h_white;
+	char *def;
+}Colors;
 
 bool canceled=FALSE;
 bool exitProgram=FALSE;
 int prevInput=0;
 
+void init_colors(bool uncolored){
+	if(uncolored){
+		Colors.yellow=Colors.h_green=Colors.h_red=Colors.h_cyan=Colors.h_white=Colors.def="";
+		return;
+	}
+	Colors.yellow="\e[0;33m";
+	Colors.h_green="\e[0;92m";
+	Colors.h_red="\e[0;91m";
+	Colors.h_cyan="\e[0;96m";
+	Colors.h_white="\e[0;97m";
+	Colors.def="\e[0m";
+}
+
 void print_error(char *msg, char *libGPTError, bool exitProgram){
-	printf("\n%s%s%s%s\n",C_HRED, msg,libGPTError,C_DEFAULT);
+	printf("\n%s%s%s%s\n",Colors.h_red, msg,libGPTError,Colors.def);
 	if(exitProgram){
 		printf("\n");
 		exit(EXIT_FAILURE);
@@ -86,7 +101,8 @@ int log_response(ChatGPTResponse cgptResponse, char *logFile){
 	FILE *f=fopen(logFile,"a");
 	if(f==NULL) return RETURN_ERROR;
 	fprintf(f,"\"%d/%02d/%02d\"\t\"%02d:%02d:%02d\"\t",tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	fprintf(f,"%s\t%d\t%d\t%d\t%.6f\n",cgptResponse.finishReason, cgptResponse.promptTokens, cgptResponse.completionTokens,cgptResponse.totalTokens,cgptResponse.cost);
+	fprintf(f,"%s\t%d\t%d\t%d\t%.6f\t%s\n",cgptResponse.finishReason, cgptResponse.promptTokens,
+			cgptResponse.completionTokens,cgptResponse.totalTokens,cgptResponse.cost,cgptResponse.model);
 	fclose(f);
 	return RETURN_OK;
 }
@@ -101,25 +117,25 @@ void *speech_response(void *args){
 void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showModel,
 		bool showFinishReason, bool showPromptTokens,bool showCompletionTokens, bool showTotalTokens,
 		bool showCost){
-	char *defColor=(responseVelocity==0)?"":C_DEFAULT, *respColor=(responseVelocity==0)?"":C_YELLOW;
+	printf("%s",Colors.h_white);
 	if(responseVelocity==0){
 		printf("%s",cgptResponse->contentFormatted);
 	}else{
-		printf("%s\n",C_HWHITE);
+		printf("\n");
 		for(int i=0;cgptResponse->contentFormatted[i]!=0 && !canceled;i++){
-			usleep(rand() % responseVelocity + 20000);
+			usleep(responseVelocity);
 			printf("%c",cgptResponse->contentFormatted[i]);
 			fflush(stdout);
 		}
 	}
 	printf("\n");
-	if(showModel) printf("%s\nModel: %s%s\n",defColor,respColor, cgptResponse->model);
-	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",defColor,respColor,cgptResponse->finishReason);
-	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",defColor,respColor);
-	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",defColor,respColor, cgptResponse->promptTokens);
-	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",defColor,respColor, cgptResponse->completionTokens);
-	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",defColor,respColor, cgptResponse->totalTokens);
-	if(showCost) printf("%s\nCost approx.: %s%.6f\n",defColor,respColor, cgptResponse->cost);
+	if(showModel) printf("%s\nModel: %s%s\n",Colors.def,Colors.yellow, cgptResponse->model);
+	if(showFinishReason && !canceled) printf("\n%sFinish status: %s%s\n",Colors.def,Colors.yellow,cgptResponse->finishReason);
+	if(showFinishReason && canceled) printf("%s\nFinish status: %scanceled by user\n",Colors.def,Colors.yellow);
+	if(showPromptTokens) printf("%s\nPrompt tokens: %s%d\n",Colors.def,Colors.yellow, cgptResponse->promptTokens);
+	if(showCompletionTokens) printf("%s\nCompletion tokens: %s%d\n",Colors.def,Colors.yellow, cgptResponse->completionTokens);
+	if(showTotalTokens) printf("%s\nTotal tokens: %s%d\n",Colors.def,Colors.yellow, cgptResponse->totalTokens);
+	if(showCost) printf("%s\nCost approx.: %s%.6f\n",Colors.def,Colors.yellow, cgptResponse->cost);
 }
 
 void usage(char *programName){
@@ -145,7 +161,7 @@ void check_service_status(){
 		print_error("",libGPT_error(resp),FALSE);
 		return;
 	}
-	printf("\nService Status: %s'%s'%s\n",C_HWHITE,serviceStatus,C_DEFAULT);
+	printf("\nService Status: %s'%s'%s\n",Colors.h_white,serviceStatus,Colors.def);
 	free(serviceStatus);
 	return;
 }
@@ -191,6 +207,7 @@ int main(int argc, char *argv[]) {
 	bool checkStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,
 			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE,showCost=FALSE, showModel=FALSE;
 	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY, presPenalty=LIBGPT_DEFAULT_PRES_PENALTY, temperature=LIBGPT_DEFAULT_TEMPERATURE;
+	init_colors(FALSE);
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
 		if(strcmp(argv[i],"--version")==0){
@@ -249,7 +266,7 @@ int main(int argc, char *argv[]) {
 		if(strcmp(argv[i],"--response-velocity")==0){
 			if(i+1>=argc) print_error("--response-velocity: option argument missing. ","",TRUE);
 			responseVelocity=strtod(argv[i+1],&tail);
-			if(responseVelocity<=0 || *tail!='\0') print_error("Response velocity value not valid. ","",TRUE);
+			if(responseVelocity<0 || *tail!='\0') print_error("Response velocity value not valid. ","",TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--max-context-messages")==0){
@@ -300,16 +317,16 @@ int main(int argc, char *argv[]) {
 			message=argv[i+1];
 			continue;
 		}
+		if(strcmp(argv[i],"--uncolored")==0){
+			init_colors(TRUE);
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--gpt-4")==0){
 			model="gpt-4";
 			i--;
 			continue;
 		}
-		/*if(strcmp(argv[i],"--gpt-4-32k")==0){
-			model="gpt-4-32k";
-			i--;
-			continue;
-		}*/
 		if(strcmp(argv[i],"--check-status")==0){
 			checkStatus=TRUE;
 			i--;
@@ -363,6 +380,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--help")==0){
 			usage(argv[0]);
+			printf("\n");
 			exit(EXIT_FAILURE);
 		}
 		usage(argv[0]);
@@ -370,14 +388,15 @@ int main(int argc, char *argv[]) {
 	}
 	ChatGPT cgpt;
 	int resp=0;
-	if((resp=libGPT_init(&cgpt, model, apikey, role, roleFile, maxTokens, freqPenalty, presPenalty, temperature,
-			n, maxContextMessages))!=RETURN_OK){
+	if((resp=libGPT_init(&cgpt, model, apikey, role, roleFile, maxTokens, freqPenalty, presPenalty,
+			temperature, n, maxContextMessages))!=RETURN_OK){
 		print_error("Initialization error. ",libGPT_error(resp),TRUE);
 	}
 	if(sessionFile!=NULL){
 		if((resp=libGPT_import_session_file(sessionFile))!=RETURN_OK) print_error("Error importing session file. ",libGPT_error(resp),FALSE);
 	}
 	if(message!=NULL){
+		init_colors(TRUE);
 		send_chat(cgpt, message, 0, showModel, showFinishedStatus, showPromptTokens, showCompletionTokens,
 				showTotalTokens, showCost, FALSE, logFile, checkStatus);
 		libGPT_clean(&cgpt);
@@ -390,9 +409,9 @@ int main(int argc, char *argv[]) {
 		exitProgram=FALSE;
 		canceled=FALSE;
 		free(messagePrompted);
-		printf("%s\n",C_HCYAN);
+		printf("%s\n",Colors.h_cyan);
 		messagePrompted=readline_get(PROMPT_DEFAULT, FALSE);
-		printf("%s",C_DEFAULT);
+		printf("%s",Colors.def);
 		if(exitProgram && strcmp(messagePrompted,"")==0){
 			free(messagePrompted);
 			break;

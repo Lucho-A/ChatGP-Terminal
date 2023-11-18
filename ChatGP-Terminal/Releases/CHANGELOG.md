@@ -1,17 +1,21 @@
 #### v1.2.1:202311XX (Under-Dev./Testing)
 
-- SHA2-256(chatgp-terminal_1.2_0.deb)=
-- SHA2-256(chatgp-terminal_1.2_0.tar.gz)=
+- SHA2-256(chatgp-terminal_1.2_1.deb)=
+- SHA2-256(chatgp-terminal_1.2_1.tar.gz)=
 
 Features:
-- _(beta)_ Added option '--gpt-4'. No argument required. If the option is specified, 'gpt-4' model will be used.
+- Added option '--gpt-4'. No argument required. If the option is specified, 'gpt-4' model will be used.
 - Added option '--pres-penalty'. It allows to incorporate a 'Presence Penalty' value. Default 0.0.
 - Added option 'pp;[value]' when prompting, in order to change the 'presence penalty' parameter. An empty value assign the 'session value'.
 - Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
+- Added option '--uncolored'. Yes, you guessed hhahah stdout uncolored. When '--message' is specified, the output is always uncolored. Default: false.
 
 Others:
-- in order to simplify code, and better maintenance/scalability, the parameter's values validation (boundaries) are done in server side.
+- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side.
 - added costs associated with gpt-4 model (i: 0.03, o:0.06)
+- now it's possible to assign the value 0 to '--response-velocity' parameter (no 'typing' effect). Default value: 25000
+- _(under evaluation)_ in order to achieve a more smoothly reading, the random term at the moment of print out the response was removed.
+- '--log-file' logs the model used in the response.
 - minor changes & code cleaned-up
 
 #### v1.2.0:20231111
