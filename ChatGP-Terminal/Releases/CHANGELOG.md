@@ -4,19 +4,21 @@
 - SHA2-256(chatgp-terminal_1.2_1.tar.gz)=
 
 Features:
-- Added option '--gpt-4'. No argument required. If the option is specified, 'gpt-4' model will be used.
+- Added option '--model [value]'. It allows to specify the model to use.
+- Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
+- Added option 'model; [value]' when prompting for changing the model.
 - Added option '--pres-penalty'. It allows to incorporate a 'Presence Penalty' value. Default 0.0.
 - Added option 'pp;[value]' when prompting, in order to change the 'presence penalty' parameter. An empty value assign the 'session value'.
-- Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
 - Added option '--uncolored'. Yes, you guessed hhahah stdout uncolored. When '--message' is specified, the output is always uncolored. Default: false.
 
 Others:
-- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side.
-- added costs associated with gpt-4 model (i: 0.03, o:0.06)
+- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side. For similar reasons, as long as now it's possible to use any chat model, '--show-cost' was removed. Just for the records, IMO, this info. should be part of the response. (1)
 - now it's possible to assign the value 0 to '--response-velocity' parameter (no 'typing' effect). Default value: 25000
-- _(under evaluation)_ in order to achieve a more smoothly reading, the random term at the moment of print out the response was removed.
-- '--log-file' logs the model used in the response.
+- the random term at the moment of printing out the response was removed.
+- '--log-file' adds to log the model used in the response (and the cost is not longer logged).
 - minor changes & code cleaned-up
+
+(1) although ur expecting chatgpt write a novel by you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
 
 #### v1.2.0:20231111
 

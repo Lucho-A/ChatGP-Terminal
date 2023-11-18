@@ -36,12 +36,6 @@
 #define	LIBGPT_MIN_CONTEXT_MSGS				0
 #define	LIBGPT_DEFAULT_MAX_CONTEXT_MSGS		3
 
-#define	LIBGPT_PROMPT_COST					0.001
-#define	LIBGPT_COMPLETION_COST				0.002
-
-#define	LIBGPT_4_PROMPT_COST				0.03
-#define	LIBGPT_4_COMPLETION_COST			0.06
-
 #define DBG									dbg("WTFFF?!?!");
 
 typedef enum{
@@ -70,7 +64,8 @@ enum errors{
 	LIBGPT_OPENING_ROLE_FILE_ERROR,
 	LIBGPT_NO_HISTORY_CONTEXT_ERROR,
 	LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR,
-	LIBGPT_CONTEXT_MSGS_ERROR
+	LIBGPT_CONTEXT_MSGS_ERROR,
+	LIBGPT_NULL_STRUCT_ERROR
 };
 
 typedef struct ChatGPT{
@@ -94,10 +89,11 @@ typedef struct ChatGPTResponse{
 	unsigned int promptTokens;
 	unsigned int completionTokens;
 	unsigned int totalTokens;
-	double cost;
 }ChatGPTResponse;
 
 int libGPT_init(ChatGPT *, char *, char *, char *, char *, long int, double, double, double, int, int);
+int libGPT_set_model(ChatGPT *, char *);
+int libGPT_set_api(ChatGPT *, char *);
 int libGPT_set_max_tokens(ChatGPT *, long int);
 int libGPT_set_n(ChatGPT *, int);
 int libGPT_set_frequency_penalty(ChatGPT *, double);

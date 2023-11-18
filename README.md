@@ -1,6 +1,6 @@
 # ChatGP-Terminal
 <p align=justify>
-The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. Models 'gpt-3.5-turbo' & 'gpt-4' are supported.
+The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. All chat endpoints are supported (since v1.2.1), for example: 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-1106-preview', etc.
 </p>
 <ul>
 <li> Downloads: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
@@ -65,11 +65,3 @@ Into the man page you can find others.
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/7cde0eab-3ace-4c61-b68c-2a93b90d7f80)
 
 ![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/721de418-ebee-47f4-b64a-29df0d538de2)
-
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/b8746769-496a-4eb2-9586-d0a94b995075)
-
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/6291c499-6155-4880-9c99-a85b8e8cac62)
-
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/21a6dfe7-3f17-4b12-8b8d-968e7846847c)
-
-![imagen](https://github.com/Lucho-A/ChatGP-Terminal/assets/40904281/890ffa17-6120-43f7-ae4d-8c18d272ca95)

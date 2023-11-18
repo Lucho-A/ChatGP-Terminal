@@ -212,11 +212,8 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	if(strstr(cgptResponse->model,"gpt-4")){
-		cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_4_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_4_COMPLETION_COST;
-	}else{
-		cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
-	}
+	//cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
+
 	return RETURN_OK;
 }
 
@@ -367,6 +364,9 @@ char * libGPT_error(int error){
 	case LIBGPT_CONTEXT_MSGS_ERROR:
 		snprintf(libGPTError, 1024,"'Max. Context Message' value out-of-boundaries. ");
 		break;
+	case LIBGPT_NULL_STRUCT_ERROR:
+		snprintf(libGPTError, 1024,"ChatGPT structure null. ");
+		break;
 	default:
 		snprintf(libGPTError, 1024,"Error not handled. ");
 		break;
@@ -387,6 +387,18 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 	if(cgptResponse->content!=NULL) free(cgptResponse->content);
 	if(cgptResponse->contentFormatted!=NULL) free(cgptResponse->contentFormatted);
 	if(cgptResponse->finishReason!=NULL) free(cgptResponse->finishReason);
+	return RETURN_OK;
+}
+
+int libGPT_set_model(ChatGPT *cgpt, char *model){
+	if(model==NULL) model="";
+	cgpt->model=model;
+	return RETURN_OK;
+}
+
+int libGPT_set_api(ChatGPT *cgpt, char *apiKey){
+	if(apiKey==NULL) apiKey="";
+	cgpt->apiKey=apiKey;
 	return RETURN_OK;
 }
 
@@ -417,11 +429,12 @@ int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
 
 int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *roleFile, long int maxTokens,
 		double freqPenalty, double presPenalty, double temperature, int n, int maxContextMessage){
+	if(cgpt==NULL) return LIBGPT_NULL_STRUCT_ERROR;
 	SSL_library_init();
 	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
-	if(model==NULL) model="";
-	if(api==NULL) api="";
 	int resp=0;
+	if((resp=libGPT_set_model(cgpt,model))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_api(cgpt,api))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_max_tokens(cgpt,maxTokens))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_frequency_penalty(cgpt,freqPenalty))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_presence_penalty(cgpt,presPenalty))!=RETURN_OK) return resp;
@@ -652,7 +665,6 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	cgptResponse->promptTokens=0;
 	cgptResponse->completionTokens=0;
 	cgptResponse->totalTokens=0;
-	cgptResponse->cost=0.0;
 	char *messageParsed=NULL;
 	parse_string(&messageParsed, message);
 	char *context=malloc(1), *buf=NULL;
