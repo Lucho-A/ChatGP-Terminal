@@ -1,6 +1,8 @@
 # ChatGP-Terminal
 <p align=justify>
-The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. All chat endpoints are supported (since v1.2.1), for example: 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-1106-preview', etc.
+The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. All chat endpoints are supported (since v1.2.1), for example: 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-1106-preview'<sup>1</sup>, etc.
+  
+  <sup>1</sup>In this particular case, only chat is implemented by now.  
 </p>
 <ul>
 <li> Downloads: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
