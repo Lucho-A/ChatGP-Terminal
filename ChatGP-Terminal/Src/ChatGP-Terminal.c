@@ -41,8 +41,7 @@ struct Colors{
 	char *def;
 }Colors;
 
-bool canceled=FALSE;
-bool exitProgram=FALSE;
+bool canceled=FALSE, exitProgram=FALSE;
 int prevInput=0;
 
 void init_colors(bool uncolored){
@@ -442,7 +441,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			if (arg[0]==0) strcpy(arg,model);
-			printf("\n%s\n",arg);
 			int resp=0;
 			if((resp=libGPT_set_model(&cgpt, arg))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;

@@ -1,4 +1,4 @@
-#### v1.2.1:202311XX (Under-Dev./Testing)
+#### v1.2.1:20231119
 
 - SHA2-256(chatgp-terminal_1.2_1.deb)=
 - SHA2-256(chatgp-terminal_1.2_1.tar.gz)=
@@ -12,7 +12,7 @@ Features:
 - Added option '--uncolored'. Yes, you guessed hhahah stdout uncolored. When '--message' is specified, the output is always uncolored. Default: false.
 
 Others:
-- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side. For similar reasons, as long as now it's possible to use any chat model, '--show-cost' was removed. Just for the records, IMO, this info. should be part of the response. (1)
+- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side. For similar reasons, as long as now it's possible to use any chat model, '--show-cost' was removed. Just for the records, imo, this info. should be part of the responses. (1)
 - now it's possible to assign the value 0 to '--response-velocity' parameter (no 'typing' effect). Default value: 25000
 - the random term at the moment of printing out the response was removed.
 - '--log-file' adds to log the model used in the response (and the cost is not longer logged).

@@ -167,10 +167,9 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		cgptResponse->content=malloc(strlen(buffer)+1);
 		memset(cgptResponse->content,0,strlen(buffer)+1);
 		snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
-		cgptResponse->contentFormatted=malloc(strlen(buffer)+1);
-		memset(cgptResponse->contentFormatted,0,strlen(buffer)+1);
 		format_string(&cgptResponse->contentFormatted, buffer);
 		free(messageSent);
+		free(buffer);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
 	free(buffer);
@@ -211,8 +210,6 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 	free(buffer);
-
-	//cgptResponse->cost=(cgptResponse->promptTokens/1000.0) * LIBGPT_PROMPT_COST + (cgptResponse->completionTokens/1000.0) * LIBGPT_COMPLETION_COST;
 
 	return RETURN_OK;
 }
@@ -392,13 +389,18 @@ int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 
 int libGPT_set_model(ChatGPT *cgpt, char *model){
 	if(model==NULL) model="";
-	cgpt->model=model;
+	if(cgpt->model!=NULL) free(cgpt->model);
+	cgpt->model=malloc(strlen(model)+1);
+	if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
+	snprintf(cgpt->model,strlen(model)+1,"%s",model);
 	return RETURN_OK;
 }
 
 int libGPT_set_api(ChatGPT *cgpt, char *apiKey){
 	if(apiKey==NULL) apiKey="";
-	cgpt->apiKey=apiKey;
+	cgpt->apiKey=malloc(strlen(apiKey)+1);
+	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
+	snprintf(cgpt->apiKey,strlen(apiKey)+1,"%s",apiKey);
 	return RETURN_OK;
 }
 
@@ -440,12 +442,6 @@ int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *r
 	if((resp=libGPT_set_presence_penalty(cgpt,presPenalty))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_temperature(cgpt,temperature))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_n(cgpt,n))!=RETURN_OK) return resp;
-	cgpt->model=malloc(strlen(model)+1);
-	if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(cgpt->model,strlen(model)+1,"%s",model);
-	cgpt->apiKey=malloc(strlen(api)+1);
-	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(cgpt->apiKey,strlen(api)+1,"%s",api);
 	if(roleFile!=NULL){
 		FILE *f=fopen(roleFile,"r");
 		if(f==NULL) return LIBGPT_OPENING_ROLE_FILE_ERROR;
