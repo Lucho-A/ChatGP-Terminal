@@ -1,6 +1,6 @@
 # ChatGP-Terminal
 <p align=justify>
-The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. All chat endpoint models are supported (since v1.2.1). In the particular case of 'gpt-4-vision-preview' at the moment only chat is implemented.
+The simplest and cutest hahah C-program for querying ChatGPT from Linux terminal. All chat endpoint models are supported (since v1.2.1). In the particular case of 'gpt-4-vision-preview' upload images isn't implemented.
 </p>
 <ul>
 <li> Downloads: <a href="https://github.com/Lucho-A/ChatGP-Terminal/tree/master/ChatGP-Terminal/Releases">here</a></li>
