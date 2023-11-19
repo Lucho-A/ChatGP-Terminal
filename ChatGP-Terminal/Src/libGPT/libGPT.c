@@ -180,7 +180,7 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	snprintf(cgptResponse->model,strlen(buffer)+1,"%s", buffer);
 	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
 	cgptResponse->created=strtol(buffer,NULL,10);
 	free(buffer);
 
@@ -193,21 +193,24 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	free(messageSent);
 	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"')==RETURN_ERROR){
+		if(get_string_from_token(cgptResponse->httpResponse,"\"finish_details\": {\"type\": \"",&buffer,'\"')==RETURN_ERROR)
+			return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	}
 	cgptResponse->finishReason=malloc(strlen(buffer)+1);
 	memset(cgptResponse->finishReason,0,strlen(buffer)+1);
 	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
 	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->promptTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->completionTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'\n')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
+	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'}')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
 	cgptResponse->totalTokens=strtol(buffer,NULL,10);
 	free(buffer);
 
