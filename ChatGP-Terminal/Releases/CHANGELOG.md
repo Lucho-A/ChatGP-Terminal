@@ -1,4 +1,4 @@
-#### v1.2.1:20231111
+#### v1.2.1:20231119
 
 - SHA2-256(chatgp-terminal_1.2_1.deb)=c729d9148ffcfbf22ebbb54e4f5e5078d5dad7bc1b1a66e22a092faeb454c0a7
 - SHA2-256(chatgp-terminal_1.2_1.tar.gz)=4b1dc7faa1eba07c34d25582e81aecd3428fb95c414054d90486e4d52a1590f6
