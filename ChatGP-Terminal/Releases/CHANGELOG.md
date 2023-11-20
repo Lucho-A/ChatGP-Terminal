@@ -19,6 +19,7 @@ Others:
 - minor changes & code cleaned-up
 
 (1) in the particular case of 'gpt-4-vision-preview' uploading images isn't implemented.
+
 (2) unless ur expecting chatgpt write a novel for you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
 
 #### v1.2.0:20231111
