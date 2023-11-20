@@ -1,10 +1,10 @@
-#### v1.2.1:202311XX (Under Testing)
+#### v1.2.1:20231111
 
-- SHA2-256(chatgp-terminal_1.2_1.deb)=
-- SHA2-256(chatgp-terminal_1.2_1.tar.gz)=
+- SHA2-256(chatgp-terminal_1.2_1.deb)=c729d9148ffcfbf22ebbb54e4f5e5078d5dad7bc1b1a66e22a092faeb454c0a7
+- SHA2-256(chatgp-terminal_1.2_1.tar.gz)=4b1dc7faa1eba07c34d25582e81aecd3428fb95c414054d90486e4d52a1590f6
 
 Features:
-- Added option '--model [value]'. It allows to specify the model to use.
+- Added option '--model [value]'. It allows to specify the model to use. (1)
 - Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
 - Added option 'model; [value]' when prompting for changing the model.
 - Added option '--pres-penalty'. It allows to incorporate a 'Presence Penalty' value. Default 0.0.
@@ -12,13 +12,14 @@ Features:
 - Added option '--uncolored'. Yes, you guessed hhahah stdout uncolored. When '--message' is specified, the output is always uncolored. Default: false.
 
 Others:
-- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side. For similar reasons, as long as now it's possible to use any chat model, '--show-cost' was removed. Just for the records, imo, this info. should be part of the responses. (1)
+- in order to simplify code, and better maintenance/scalability, the validation of the parameter's values (boundaries) are done in server side. For similar reasons, as long as now it's possible to use any chat model, '--show-cost' was removed. Just for the records, imo, this info. should be part of the responses. (2)
 - now it's possible to assign the value 0 to '--response-velocity' parameter (no 'typing' effect). Default value: 25000
 - the random term at the moment of printing out the response was removed.
 - '--log-file' adds to log the model used in the response (and the cost is not longer logged).
 - minor changes & code cleaned-up
 
-(1) unless ur expecting chatgpt write a novel for you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
+(1) in the particular case of 'gpt-4-vision-preview' uploading images isn't implemented.
+(2) unless ur expecting chatgpt write a novel for you hahhah (pretty sad, btw, isn't it??), just use the model 'gpt-3.5-turbo' (default). It's, by far, the best relation between results and cost.
 
 #### v1.2.0:20231111
 
