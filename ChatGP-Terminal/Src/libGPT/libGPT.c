@@ -31,8 +31,6 @@
 
 #define BUFFER_SIZE_16K						(1024*16)
 
-long int recvTimeOut=SOCKET_RECV_TIMEOUT_MS;
-
 typedef struct Messages{
 	char *userMessage;
 	char *assistantMessage;
@@ -42,6 +40,7 @@ typedef struct Messages{
 static Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
+long int recvTimeOut=SOCKET_RECV_TIMEOUT_MS;
 
 int libGPT_set_timeout(long int timeOut){
 	if(timeOut<0) return LIBGPT_RECV_TIMEOUT_ERROR;

@@ -8,7 +8,7 @@ Features:
 - Added option 'tp; [value]' when prompting, for changing the 'top p' parameter.
 - Added option '--timeout'. For setting the timeout of responses (in ms). Default 60000.
 - Added option 'to; [value]' when prompting, for changing the timeout.
-- //TODO _(under evaluation)_ option '--alert-finished-status' for showing the finished status only if finished status != "Stop".
+- Added option '--alert-finished-status': shows the finished status only if finished status != "stop".
 
 Improvements:
 - shows all the choices received (n>1). Because each choice has its own 'finished response', if choice > 1, 'N/A' will be logged (if '--log-file') into this field. In the same line, '--show-finished-status' shows information for each choice.

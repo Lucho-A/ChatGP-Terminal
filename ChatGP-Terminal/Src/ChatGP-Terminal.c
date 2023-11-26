@@ -121,7 +121,7 @@ void *speech_response(void *args){
 }
 
 void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bool showModel,
-		bool showFinishReason, bool showPromptTokens,bool showCompletionTokens, bool showTotalTokens){
+		bool alertFinishStatus, bool showFinishReason, bool showPromptTokens,bool showCompletionTokens, bool showTotalTokens){
 	printf("%s",Colors.h_white);
 	if(responseVelocity==0){
 		for(int i=0;i<cgptResponse->responses;i++){
@@ -139,6 +139,10 @@ void print_response(ChatGPTResponse *cgptResponse, long int responseVelocity, bo
 				fflush(stdout);
 			}
 			printf("\n");
+			if(alertFinishStatus){
+				if(strcmp(cgptResponse->choices[choice].finishReason,"stop")!=0)
+					printf("\n%sFinish status: %s%s\n",Colors.def,Colors.yellow,cgptResponse->choices[choice].finishReason);
+			}
 			if(showFinishReason && !canceled)
 				printf("\n%sFinish status: %s%s\n",Colors.def,Colors.yellow,cgptResponse->choices[choice].finishReason);
 		}
@@ -178,8 +182,8 @@ void check_service_status(){
 	return;
 }
 
-void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showModel, bool showFinishedStatus,
-		bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens,bool tts,
+void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool showModel, bool alertFinishedStatus
+		,bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens,bool tts,
 		char *logFile, bool checkStatus){
 	ChatGPTResponse cgptResponse;
 	int resp=0;
@@ -210,7 +214,7 @@ void send_chat(ChatGPT cgpt, char *message, long int responseVelocity, bool show
 			pthread_t threadSpeechMessage;
 			pthread_create(&threadSpeechMessage, NULL, speech_response, (void*)msg);
 		}
-		print_response(&cgptResponse, responseVelocity, showModel, showFinishedStatus, showPromptTokens,
+		print_response(&cgptResponse, responseVelocity, showModel, alertFinishedStatus, showFinishedStatus, showPromptTokens,
 				showCompletionTokens,showTotalTokens);
 		if(logFile!=NULL){
 			if(log_response(cgptResponse, logFile)!=RETURN_OK) print_error("Error logging file. ",strerror(errno),FALSE);
@@ -226,8 +230,8 @@ int main(int argc, char *argv[]) {
 	size_t len=0;
 	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY,
 			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS, n=LIBGPT_DEFAULT_N;
-	bool checkStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,showCompletionTokens=FALSE,
-			showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE, showModel=FALSE;
+	bool checkStatus=FALSE, alertFinishedStatus=FALSE, showFinishedStatus=FALSE,showPromptTokens=FALSE,
+			showCompletionTokens=FALSE,showTotalTokens=FALSE,textToSpeech=FALSE, csv=FALSE, showModel=FALSE;
 	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY, presPenalty=LIBGPT_DEFAULT_PRES_PENALTY,
 			topP=LIBGPT_DEFAULT_TOP_P, temperature=LIBGPT_DEFAULT_TEMPERATURE;
 	init_colors(FALSE);
@@ -373,6 +377,11 @@ int main(int argc, char *argv[]) {
 			i--;
 			continue;
 		}
+		if(strcmp(argv[i],"--alert-finished-status")==0){
+			alertFinishedStatus=TRUE;
+			i--;
+			continue;
+		}
 		if(strcmp(argv[i],"--show-finished-status")==0){
 			showFinishedStatus=TRUE;
 			i--;
@@ -430,7 +439,7 @@ int main(int argc, char *argv[]) {
 	}
 	if(message!=NULL){
 		init_colors(TRUE);
-		send_chat(cgpt, message, 0, showModel, showFinishedStatus, showPromptTokens, showCompletionTokens,
+		send_chat(cgpt, message, 0, showModel, alertFinishedStatus, showFinishedStatus, showPromptTokens, showCompletionTokens,
 				showTotalTokens, FALSE, logFile, checkStatus);
 		libGPT_clean(&cgpt);
 		exit(EXIT_SUCCESS);
@@ -585,7 +594,7 @@ int main(int argc, char *argv[]) {
 				print_error("",libGPT_error(resp),FALSE);
 			continue;
 		}
-		send_chat(cgpt, messagePrompted, responseVelocity, showModel, showFinishedStatus, showPromptTokens,
+		send_chat(cgpt, messagePrompted, responseVelocity, showModel, alertFinishedStatus, showFinishedStatus, showPromptTokens,
 				showCompletionTokens, showTotalTokens, textToSpeech,logFile, checkStatus);
 		add_history(messagePrompted);
 	}while(TRUE);
