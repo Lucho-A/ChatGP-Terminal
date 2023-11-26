@@ -31,6 +31,8 @@
 
 #define BUFFER_SIZE_16K						(1024*16)
 
+long int recvTimeOut=SOCKET_RECV_TIMEOUT_MS;
+
 typedef struct Messages{
 	char *userMessage;
 	char *assistantMessage;
@@ -40,6 +42,12 @@ typedef struct Messages{
 static Messages *historyContext=NULL;
 static int contHistoryContext=0;
 static int maxHistoryContext=0;
+
+int libGPT_set_timeout(long int timeOut){
+	if(timeOut<0) return LIBGPT_RECV_TIMEOUT_ERROR;
+	(timeOut==0)?(recvTimeOut=SOCKET_RECV_TIMEOUT_MS):(recvTimeOut=timeOut);
+	return RETURN_OK;
+}
 
 static int parse_string(char **stringTo, char *stringFrom){
 	int cont=0, contEsc=0;
@@ -208,8 +216,8 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 		memset(cgptResponse->choices[i].content,0,strlen(buffer[i])+1);
 		snprintf(cgptResponse->choices[i].content,strlen(buffer[i])+1,"%s", buffer[i]);
 		format_string(&cgptResponse->choices[i].contentFormatted, buffer[i]);
-		char *buf=malloc(strlen("\\nIndex: ")+strlen(cgptResponse->choices[i].content)+sizeof(i)+1);
-		snprintf(buf,strlen("\\nIndex: ")+strlen(cgptResponse->choices[i].content)+sizeof(i)+1,"\\nIndex %d: %s",i,cgptResponse->choices[i].content);
+		char *buf=malloc(strlen("\\n")+strlen(cgptResponse->choices[i].content)+1);
+		snprintf(buf,strlen("\\n")+strlen(cgptResponse->choices[i].content)+1,"\\n%s",cgptResponse->choices[i].content);
 		msg=realloc(msg,strlen(msg)+strlen(buf)+1);
 		if(msg==NULL){
 			free(msg);
@@ -371,6 +379,9 @@ char * libGPT_error(int error){
 		break;
 	case LIBGPT_SOCKET_RECV_TIMEOUT_ERROR:
 		snprintf(libGPTError, 1024,"Receiving packet time out. ");
+		break;
+	case LIBGPT_RECV_TIMEOUT_ERROR:
+		snprintf(libGPTError, 1024,"Time out value not valid. ");
 		break;
 	case LIBGPT_RECEIVING_PACKETS_ERROR:
 		snprintf(libGPTError, 1024,"Receiving packet error. ");
@@ -623,7 +634,7 @@ static int get_http(char *url,char *payload, char **bufferHTTP){
 	char buffer[BUFFER_SIZE_16K]="";
 	memset(buffer,0,BUFFER_SIZE_16K);
 	do{
-		numEvents=poll(pfds, 1, SOCKET_RECV_TIMEOUT_MS);
+		numEvents=poll(pfds, 1, recvTimeOut);
 		if(numEvents==0){
 			close(socketConn);
 			clean_ssl(sslConn);

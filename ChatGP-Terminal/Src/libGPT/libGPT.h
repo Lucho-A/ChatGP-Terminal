@@ -58,6 +58,7 @@ enum errors{
 	LIBGPT_SENDING_PACKETS_ERROR,
 	LIBGPT_POLLIN_ERROR,
 	LIBGPT_SOCKET_RECV_TIMEOUT_ERROR,
+	LIBGPT_RECV_TIMEOUT_ERROR,
 	LIBGPT_RECEIVING_PACKETS_ERROR,
 	LIBGPT_RESPONSE_MESSAGE_ERROR,
 	LIBGPT_ZEROBYTESRECV_ERROR,
@@ -107,6 +108,7 @@ int libGPT_set_frequency_penalty(ChatGPT *, double);
 int libGPT_set_presence_penalty(ChatGPT *, double);
 int libGPT_set_temperature(ChatGPT *, double);
 int libGPT_set_top_p(ChatGPT *, double);
+int libGPT_set_timeout(long int);
 int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);

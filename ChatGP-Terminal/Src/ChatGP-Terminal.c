@@ -292,6 +292,12 @@ int main(int argc, char *argv[]) {
 			if(*tail!='\0') print_error("'N' value not valid. ","",TRUE);
 			continue;
 		}
+		if(strcmp(argv[i],"--timeout")==0){
+			if(i+1>=argc) print_error("--timeout: option argument missing. ","",TRUE);
+			long int timeout=strtol(argv[i+1],&tail,10);
+			if(*tail!='\0' || libGPT_set_timeout(timeout)!=RETURN_OK) print_error("'Timeout' value not valid. ","",TRUE);
+			continue;
+		}
 		if(strcmp(argv[i],"--response-velocity")==0){
 			if(i+1>=argc) print_error("--response-velocity: option argument missing. ","",TRUE);
 			responseVelocity=strtod(argv[i+1],&tail);
@@ -473,6 +479,20 @@ int main(int argc, char *argv[]) {
 			if (arg[0]==0) strcpy(arg,model);
 			int resp=0;
 			if((resp=libGPT_set_model(&cgpt, arg))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
+			continue;
+		}
+		if(strstr(messagePrompted,"to;")==messagePrompted){
+			char arg[16]="";
+			for(int i=strlen("to;");i<strlen(messagePrompted) && i<16;i++) arg[i-strlen("to;")]=messagePrompted[i];
+			char *tail=NULL;
+			long int to=strtoul(arg,&tail,10);
+			if(*tail!='\0'){
+				print_error("'Timeout' value not valid. ","",FALSE);
+				continue;
+			}
+			if (arg[0]==0) to=0;
+			int resp=0;
+			if((resp=libGPT_set_timeout(to))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
 		}
 		if(strstr(messagePrompted,"mt;")==messagePrompted){
