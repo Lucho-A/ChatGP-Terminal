@@ -6,21 +6,18 @@
 Features:
 - Added option '--top-p'. It allows to incorporate a 'Top P' value. Default 1.0.
 - Added option 'tp; [value]' when prompting, for changing the 'top p' parameter.
-- //TODO option '--alert-finished-status' for showing the finished status only if finished status != "Stop".
+- //TODO _(under evaluation)_ option '--alert-finished-status' for showing the finished status only if finished status != "Stop".
 
 Improvements:
-- shows all the choices received (n>1). Because each choice has its own 'finished response', if choice > 1, 'N/A' will be logged (if '--log-file') into this field (1). In the same line, '--show-finished-status' shows information for each choice.
+- shows all the choices received (n>1). Because each choice has its own 'finished response', if choice > 1, 'N/A' will be logged (if '--log-file') into this field. In the same line, '--show-finished-status' shows information for each choice.
+
+Note: all the choices are going to be added as a single context message instead of different ones. This could be trivial but is not. Anyway, at the moment, I found this the best approach. Keep in mind the cost involved, and that, in order to avoid several responses (one for each choice) in following messages, you should choose one of the previous choices and handling 'n' parameter according.
 
 Bug-Fixed:
 - solved incorrect free().
 
-Bug-Known:
-- at the moment -see (1)- 'save;' records the latest message only, so, if n>1, only save the latest choice instead of all ones.
-
 Others:
 - minor changes & code cleaned-up.
-
-(1) _(under evaluation)_ each choice count as particular context message. Let's say: if '--context-message'==5, and n==7, and indeed you receive 7 different choices, for the next call only the latest 5 choices will be added as context (same logic for import/dumping session messages).
 
 #### v1.2.1:20231119
 

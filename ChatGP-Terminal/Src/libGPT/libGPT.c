@@ -200,14 +200,27 @@ static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	if((responses=get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"'))==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
 	cgptResponse->responses=responses;
 	cgptResponse->choices=(struct Choices *) malloc(responses * sizeof(struct Choices));
+	char *msg=NULL;
+	msg=malloc(1);
+	msg[0]=0;
 	for(int i=0;i<responses;i++){
 		cgptResponse->choices[i].content=malloc(strlen(buffer[i])+1);
 		memset(cgptResponse->choices[i].content,0,strlen(buffer[i])+1);
 		snprintf(cgptResponse->choices[i].content,strlen(buffer[i])+1,"%s", buffer[i]);
 		format_string(&cgptResponse->choices[i].contentFormatted, buffer[i]);
-		if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->choices[i].content);
+		char *buf=malloc(strlen("\\nIndex: ")+strlen(cgptResponse->choices[i].content)+sizeof(i)+1);
+		snprintf(buf,strlen("\\nIndex: ")+strlen(cgptResponse->choices[i].content)+sizeof(i)+1,"\\nIndex %d: %s",i,cgptResponse->choices[i].content);
+		msg=realloc(msg,strlen(msg)+strlen(buf)+1);
+		if(msg==NULL){
+			free(msg);
+			return LIBGPT_REALLOC_ERROR;
+		}
+		strcat(msg,buf);
+		free(buf);
 		free(buffer[i]);
 	}
+	if(maxHistoryContext>0) create_new_history_message(messageSent, msg);
+	free(msg);
 	free(messageSent);
 
 	if((responses=get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"'))==RETURN_ERROR){
