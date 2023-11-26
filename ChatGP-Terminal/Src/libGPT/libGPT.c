@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.c
  Author      : L. (lucho-a.github.io)
- Version     : 1.2.1
+ Version     : 1.2.2
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : C file
@@ -120,16 +120,26 @@ static int format_string(char **stringTo, char *stringFrom){
 	return RETURN_OK;
 }
 
-static int get_string_from_token(char *text, char *token, char **result, char endChar){
+static int get_string_from_token(char *text, char *token, char ***result, char endChar){
 	ssize_t cont=0;
-	char *message=strstr(text,token);
+	int entriesFound=0;
+	char *message=NULL;
+	message=strstr(text,token);
 	if(message==NULL) return RETURN_ERROR;
-	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++);
-	*result=malloc(cont+1);
-	memset(*result,0,cont+1);
-	cont=0;
-	for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++) (*result)[cont]=message[i];
-	return RETURN_OK;
+	while(message!=NULL){
+		entriesFound++;
+		*result = (char**) realloc(*result, entriesFound * sizeof(char*));
+		for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++);
+		(*result)[entriesFound-1]=malloc(cont+1);
+		memset((*result)[entriesFound-1],0,cont+1);
+		cont=0;
+		for(int i=strlen(token);(message[i-1]=='\\' || message[i]!=endChar);i++,cont++){
+			(*result)[entriesFound-1][cont]=message[i];
+			message[cont]='X';
+		}
+		message=strstr(message,token);
+	}
+	return entriesFound;
 }
 
 static void create_new_history_message(char *userMessage, char *assistantMessage){
@@ -161,59 +171,68 @@ static void create_new_history_message(char *userMessage, char *assistantMessage
 }
 
 static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
-	char *buffer=NULL;
+	char **buffer=NULL;
 	if(strstr(cgptResponse->httpResponse,"\"error\": {")!=NULL){
 		get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,&buffer,'\"');
-		cgptResponse->content=malloc(strlen(buffer)+1);
-		memset(cgptResponse->content,0,strlen(buffer)+1);
-		snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
-		format_string(&cgptResponse->contentFormatted, buffer);
+		cgptResponse->choices=(struct Choices *) malloc(1 * sizeof(struct Choices));
+		cgptResponse->choices[0].content=malloc(strlen(buffer[0])+1);
+		memset(cgptResponse->choices[0].content,0,strlen(buffer[0])+1);
+		snprintf(cgptResponse->choices[0].content,strlen(buffer[0])+1,"%s", buffer[0]);
+		cgptResponse->choices[0].contentFormatted=NULL;
+		format_string(&cgptResponse->choices[0].contentFormatted, buffer[0]);
 		free(messageSent);
+		free(buffer[0]);
 		free(buffer);
 		return LIBGPT_RESPONSE_MESSAGE_ERROR;
 	}
-	free(buffer);
-
-	if(get_string_from_token(cgptResponse->httpResponse,"\"model\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
-	cgptResponse->model=malloc(strlen(buffer)+1);
-	memset(cgptResponse->model,0,strlen(buffer)+1);
-	snprintf(cgptResponse->model,strlen(buffer)+1,"%s", buffer);
-	free(buffer);
 
 	if(get_string_from_token(cgptResponse->httpResponse,"\"created\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
-	cgptResponse->created=strtol(buffer,NULL,10);
-	free(buffer);
+	cgptResponse->created=strtol(buffer[0],NULL,10);
+	free(buffer[0]);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
-	cgptResponse->content=malloc(strlen(buffer)+1);
-	memset(cgptResponse->content,0,strlen(buffer)+1);
-	snprintf(cgptResponse->content,strlen(buffer)+1,"%s", buffer);
-	format_string(&cgptResponse->contentFormatted, buffer);
-	if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->content);
+	if(get_string_from_token(cgptResponse->httpResponse,"\"model\": \"",&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->model=malloc(strlen(buffer[0])+1);
+	memset(cgptResponse->model,0,strlen(buffer[0])+1);
+	snprintf(cgptResponse->model,strlen(buffer[0])+1,"%s", buffer[0]);
+	free(buffer[0]);
+
+	int responses=0;
+	if((responses=get_string_from_token(cgptResponse->httpResponse,"\"content\": \"",&buffer,'\"'))==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->responses=responses;
+	cgptResponse->choices=(struct Choices *) malloc(responses * sizeof(struct Choices));
+	for(int i=0;i<responses;i++){
+		cgptResponse->choices[i].content=malloc(strlen(buffer[i])+1);
+		memset(cgptResponse->choices[i].content,0,strlen(buffer[i])+1);
+		snprintf(cgptResponse->choices[i].content,strlen(buffer[i])+1,"%s", buffer[i]);
+		format_string(&cgptResponse->choices[i].contentFormatted, buffer[i]);
+		if(maxHistoryContext>0) create_new_history_message(messageSent, cgptResponse->choices[i].content);
+		free(buffer[i]);
+	}
 	free(messageSent);
-	free(buffer);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"')==RETURN_ERROR){
-		if(get_string_from_token(cgptResponse->httpResponse,"\"finish_details\": {\"type\": \"",&buffer,'\"')==RETURN_ERROR)
+	if((responses=get_string_from_token(cgptResponse->httpResponse,"\"finish_reason\": \"",&buffer,'\"'))==RETURN_ERROR){
+		if((responses=get_string_from_token(cgptResponse->httpResponse,"\"finish_details\": {\"type\": \"",&buffer,'\"'))==RETURN_ERROR)
 			return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
 	}
-	cgptResponse->finishReason=malloc(strlen(buffer)+1);
-	memset(cgptResponse->finishReason,0,strlen(buffer)+1);
-	snprintf(cgptResponse->finishReason,strlen(buffer)+1,"%s", buffer);
-	free(buffer);
+	for(int i=0;i<responses;i++){
+		cgptResponse->choices[i].finishReason=malloc(strlen(buffer[i])+1);
+		memset(cgptResponse->choices[i].finishReason,0,strlen(buffer[i])+1);
+		snprintf(cgptResponse->choices[i].finishReason,strlen(buffer[i])+1,"%s", buffer[i]);
+		free(buffer[i]);
+	}
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
-	cgptResponse->promptTokens=strtol(buffer,NULL,10);
-	free(buffer);
+	if(get_string_from_token(cgptResponse->httpResponse,"\"prompt_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->promptTokens=strtol(buffer[0],NULL,10);
+	free(buffer[0]);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
-	cgptResponse->completionTokens=strtol(buffer,NULL,10);
-	free(buffer);
+	if(get_string_from_token(cgptResponse->httpResponse,"\"completion_tokens\": ",&buffer,',')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->completionTokens=strtol(buffer[0],NULL,10);
+	free(buffer[0]);
 
-	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'}')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;;
-	cgptResponse->totalTokens=strtol(buffer,NULL,10);
+	if(get_string_from_token(cgptResponse->httpResponse,"\"total_tokens\": ",&buffer,'}')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+	cgptResponse->totalTokens=strtol(buffer[0],NULL,10);
+	free(buffer[0]);
 	free(buffer);
-
 	return RETURN_OK;
 }
 
@@ -375,6 +394,7 @@ char * libGPT_error(int error){
 }
 
 int libGPT_clean(ChatGPT *cgpt){
+	if(cgpt->model!=NULL) free(cgpt->model);
 	if(cgpt->apiKey!=NULL) free(cgpt->apiKey);
 	if(cgpt->systemRole!=NULL && cgpt->systemRole[0]!=0) free(cgpt->systemRole);
 	libGPT_flush_history();
@@ -384,15 +404,17 @@ int libGPT_clean(ChatGPT *cgpt){
 int libGPT_clean_response(ChatGPTResponse *cgptResponse){
 	if(cgptResponse->model!=NULL) free(cgptResponse->model);
 	if(cgptResponse->httpResponse!=NULL) free(cgptResponse->httpResponse);
-	if(cgptResponse->content!=NULL) free(cgptResponse->content);
-	if(cgptResponse->contentFormatted!=NULL) free(cgptResponse->contentFormatted);
-	if(cgptResponse->finishReason!=NULL) free(cgptResponse->finishReason);
+	for(int i=0;i<cgptResponse->responses;i++){
+		if(cgptResponse->choices[i].content!=NULL) free(cgptResponse->choices[i].content);
+		if(cgptResponse->choices[i].contentFormatted!=NULL) free(cgptResponse->choices[i].contentFormatted);
+		if(cgptResponse->choices[i].finishReason!=NULL) free(cgptResponse->choices[i].finishReason);
+	}
+	free(cgptResponse->choices);
 	return RETURN_OK;
 }
 
 int libGPT_set_model(ChatGPT *cgpt, char *model){
 	if(model==NULL) model="";
-	if(cgpt->model!=NULL) free(cgpt->model);
 	cgpt->model=malloc(strlen(model)+1);
 	if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
 	snprintf(cgpt->model,strlen(model)+1,"%s",model);
@@ -427,13 +449,18 @@ int libGPT_set_presence_penalty(ChatGPT *cgpt, double pp){
 	return RETURN_OK;
 }
 
+int libGPT_set_top_p(ChatGPT *cgpt, double top_p){
+	cgpt->top_p=top_p;
+	return RETURN_OK;
+}
+
 int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
 	cgpt->temperature=temperature;
 	return RETURN_OK;
 }
 
 int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *roleFile, long int maxTokens,
-		double freqPenalty, double presPenalty, double temperature, int n, int maxContextMessage){
+		double freqPenalty, double presPenalty, double top_p, double temperature, int n, int maxContextMessage){
 	if(cgpt==NULL) return LIBGPT_NULL_STRUCT_ERROR;
 	SSL_library_init();
 	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
@@ -443,6 +470,7 @@ int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *r
 	if((resp=libGPT_set_max_tokens(cgpt,maxTokens))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_frequency_penalty(cgpt,freqPenalty))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_presence_penalty(cgpt,presPenalty))!=RETURN_OK) return resp;
+	if((resp=libGPT_set_top_p(cgpt,top_p))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_temperature(cgpt,temperature))!=RETURN_OK) return resp;
 	if((resp=libGPT_set_n(cgpt,n))!=RETURN_OK) return resp;
 	if(roleFile!=NULL){
@@ -481,10 +509,6 @@ int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *r
 			cgpt->systemRole=LIBGPT_DEFAULT_ROLE;
 		}
 	}
-	cgpt->maxTokens=maxTokens;
-	cgpt->frequencyPenalty=freqPenalty;
-	cgpt->temperature=temperature;
-	cgpt->n=n;
 	maxHistoryContext=maxContextMessage;
 	return RETURN_OK;
 }
@@ -658,9 +682,8 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 	cgptResponse->model=NULL;
 	cgptResponse->created=0;
 	cgptResponse->httpResponse=NULL;
-	cgptResponse->content=NULL;
-	cgptResponse->contentFormatted=NULL;
-	cgptResponse->finishReason=NULL;
+	cgptResponse->choices=NULL;
+	cgptResponse->responses=0;
 	cgptResponse->promptTokens=0;
 	cgptResponse->completionTokens=0;
 	cgptResponse->totalTokens=0;
@@ -718,17 +741,19 @@ int libGPT_send_chat(ChatGPT cgpt, ChatGPTResponse *cgptResponse, char *message)
 			"\"n\": %d,"
 			"\"frequency_penalty\": %.2f,"
 			"\"presence_penalty\": %.2f,"
+			"\"top_p\": %.2f,"
 			"\"temperature\": %.2f"
 			"}";
 	len=strlen(template)+strlen(cgpt.model)+strlen(cgpt.systemRole)+strlen(context)+sizeof(cgpt.maxTokens)
-				+sizeof(cgpt.n) + sizeof(cgpt.frequencyPenalty)+ sizeof(cgpt.presencePenalty)+sizeof(cgpt.temperature);
+								+sizeof(cgpt.n) + sizeof(cgpt.frequencyPenalty)+ sizeof(cgpt.presencePenalty)
+								+sizeof(cgpt.top_p)+sizeof(cgpt.temperature);
 	char *payload=malloc(len);
 	if(payload==NULL){
 		free(messageParsed);
 		return LIBGPT_MALLOC_ERROR;
 	}
 	snprintf(payload,len,template,cgpt.model,cgpt.systemRole,context,cgpt.maxTokens,
-			cgpt.n,cgpt.frequencyPenalty,cgpt.presencePenalty,cgpt.temperature);
+			cgpt.n,cgpt.frequencyPenalty,cgpt.presencePenalty,cgpt.top_p,cgpt.temperature);
 	free(context);
 	template="POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"

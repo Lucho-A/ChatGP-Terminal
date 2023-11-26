@@ -2,7 +2,7 @@
  ============================================================================
  Name        : libGPT.h
  Author      : L. (lucho-a.github.io)
- Version     : 1.2.0
+ Version     : 1.2.2
  Created on	 : 2023/07/18
  Copyright   : GNU General Public License v3.0
  Description : Header file
@@ -18,7 +18,7 @@
 #define LIBGPT_NAME 						"libGPT"
 #define LIBGPT_MAJOR_VERSION				"1"
 #define LIBGPT_MINOR_VERSION				"2"
-#define LIBGPT_MICRO_VERSION				"1"
+#define LIBGPT_MICRO_VERSION				"2"
 #define LIBGPT_VERSION						PROGRAM_MAJOR_VERSION"."PROGRAM_MINOR_VERSION"."PROGRAM_MICRO_VERSION
 #define LIBGPT_DESCRIPTION					"C Library for ChatGPT"
 
@@ -31,6 +31,7 @@
 #define	LIBGPT_DEFAULT_FREQ_PENALTY			0.0
 #define	LIBGPT_DEFAULT_PRES_PENALTY			0.0
 #define	LIBGPT_DEFAULT_TEMPERATURE			0.5
+#define	LIBGPT_DEFAULT_TOP_P				1.0
 #define	LIBGPT_DEFAULT_N					1
 
 #define	LIBGPT_MIN_CONTEXT_MSGS				0
@@ -75,6 +76,7 @@ typedef struct ChatGPT{
 	long int maxTokens;
 	double frequencyPenalty;
 	double presencePenalty;
+	double top_p;
 	double temperature;
 	int n;
 }ChatGPT;
@@ -83,15 +85,20 @@ typedef struct ChatGPTResponse{
 	char *model;
 	long created;
 	char *httpResponse;
-	char *content;
-	char *contentFormatted;
-	char *finishReason;
+	struct Choices *choices;
+	unsigned int responses;
 	unsigned int promptTokens;
 	unsigned int completionTokens;
 	unsigned int totalTokens;
 }ChatGPTResponse;
 
-int libGPT_init(ChatGPT *, char *, char *, char *, char *, long int, double, double, double, int, int);
+struct Choices{
+	char *content;
+	char *contentFormatted;
+	char *finishReason;
+};
+
+int libGPT_init(ChatGPT *, char *, char *, char *, char *, long int, double, double, double, double, int, int);
 int libGPT_set_model(ChatGPT *, char *);
 int libGPT_set_api(ChatGPT *, char *);
 int libGPT_set_max_tokens(ChatGPT *, long int);
@@ -99,6 +106,7 @@ int libGPT_set_n(ChatGPT *, int);
 int libGPT_set_frequency_penalty(ChatGPT *, double);
 int libGPT_set_presence_penalty(ChatGPT *, double);
 int libGPT_set_temperature(ChatGPT *, double);
+int libGPT_set_top_p(ChatGPT *, double);
 int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);

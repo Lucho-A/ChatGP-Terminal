@@ -1,3 +1,23 @@
+#### v1.2.2:202311XX-Under.Dev/Testing
+
+- SHA2-256(chatgp-terminal_1.2_2.deb)=
+- SHA2-256(chatgp-terminal_1.2_2.tar.gz)=
+
+Features:
+- Added option '--top-p'. It allows to incorporate a 'Top P' value. Default 1.0.
+- Added option 'tp; [value]' when prompting, for changing the 'top p' parameter.
+
+Improvements:
+- shows all the choices received (n>1). Because each choice has its own 'finished response', if choice > 1, 'N/A' will be logged (if '--log-file') into this field (1). In the same line, '--show-finished-status' shows information for each choice.
+
+Bug-Fixed:
+- solved incorrect free().
+
+Others:
+- minor changes & code cleaned-up.
+
+(1) _(under evaluation)_ each choice count as particular context message. Let's say: if '--context-message'==5, and n==7, and indeed you receive 7 different choices, for the next call only the latest 5 choices will be added as context (same logic for import/dumping session messages).
+
 #### v1.2.1:20231119
 
 - SHA2-256(chatgp-terminal_1.2_1.deb)=c729d9148ffcfbf22ebbb54e4f5e5078d5dad7bc1b1a66e22a092faeb454c0a7
@@ -8,7 +28,7 @@ Features:
 - Added option '--show-model'. It shows the model used in the response (v.gr. 'gpt-3.5-turbo-0613', 'gpt-4-0613', etc.).
 - Added option 'model; [value]' when prompting for changing the model.
 - Added option '--pres-penalty'. It allows to incorporate a 'Presence Penalty' value. Default 0.0.
-- Added option 'pp;[value]' when prompting, in order to change the 'presence penalty' parameter. An empty value assign the 'session value'.
+- Added option 'pp; [value]' when prompting, in order to change the 'presence penalty' parameter. An empty value assign the 'session value'.
 - Added option '--uncolored'. Yes, you guessed hhahah stdout uncolored. When '--message' is specified, the output is always uncolored. Default: false.
 
 Others:
@@ -30,10 +50,10 @@ Features:
 - Added option '--freq-penalty'. Allow to incorporate a 'Frequency Penalty' (-2.0 to 2.0) value. Default 0.0.
 - Added option '--n'. Allow to incorporate an 'N' (1 to 20) value. Default 1.
 - Now, it's possible to prompt and change some parameters 'on-the-fly' (I find it useful when a response doesn't fulfill my expectations and I want to query again). Namely:
-    - 'n;[value]'  // for N parameter
-    - 'fp;[value]' // for Frequency Penalty parameter
-    - 'mt;[value]' // for Max. Tokens parameter
-    - 't;[value]'  // for Temperature parameter
+    - 'n; [value]'  // for N parameter
+    - 'fp; [value]' // for Frequency Penalty parameter
+    - 'mt; [value]' // for Max. Tokens parameter
+    - 't; [value]'  // for Temperature parameter
 
     If value is empty, the parameter adopts the value assigned when the program started (session value).
 
