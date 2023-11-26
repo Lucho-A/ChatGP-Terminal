@@ -7,7 +7,7 @@ Features:
 - Added option '--top-p'. It allows to incorporate a 'Top P' value. Default 1.0.
 - Added option 'tp; [value]' when prompting, for changing the 'top p' parameter.
 - Added option '--timeout'. For setting the timeout of responses (in ms). Default 60000.
-- Added option 'to; [value]' when prompting, for changing the timeout.
+- Added option 'to; [value]' when prompting, for changing the timeout. Zero or empty value assign the default one.
 - Added option '--alert-finished-status': shows the finished status only if finished status != "stop".
 
 Improvements:
