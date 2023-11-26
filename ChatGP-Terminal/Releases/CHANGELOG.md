@@ -6,12 +6,16 @@
 Features:
 - Added option '--top-p'. It allows to incorporate a 'Top P' value. Default 1.0.
 - Added option 'tp; [value]' when prompting, for changing the 'top p' parameter.
+//TODO - Added option '--alert-finished-status': show finished status only if finished status != "Stop".
 
 Improvements:
 - shows all the choices received (n>1). Because each choice has its own 'finished response', if choice > 1, 'N/A' will be logged (if '--log-file') into this field (1). In the same line, '--show-finished-status' shows information for each choice.
 
 Bug-Fixed:
 - solved incorrect free().
+
+Bug-Known:
+- at the moment -see (1)- 'save;' records the latest message only, so, if n>1, only save the lates choice instead of all ones.
 
 Others:
 - minor changes & code cleaned-up.
