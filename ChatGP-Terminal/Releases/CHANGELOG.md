@@ -1,7 +1,7 @@
-#### v1.2.2:202311XX-Under.Dev/Testing
+#### v1.2.2:20231128
 
-- SHA2-256(chatgp-terminal_1.2_2.deb)=
-- SHA2-256(chatgp-terminal_1.2_2.tar.gz)=
+- SHA2-256(chatgp-terminal_1.2_2.deb)=07ae1396bc1f9c97dda26d10bc1a74b5d002f7cddc7b089bcce9e529596720ba
+- SHA2-256(chatgp-terminal_1.2_2.tar.gz)=77a8768c83c2a55bf14ac07f0a6ae0bde442b3508439a4b5324763da6df9ebc1
 
 Features:
 - Added option '--top-p'. It allows to incorporate a 'Top P' value. Default 1.0.
