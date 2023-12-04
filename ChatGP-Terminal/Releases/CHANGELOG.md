@@ -1,3 +1,11 @@
+#### v1.2.3:2023XXXX-Under Dev./Testing
+
+- SHA2-256(chatgp-terminal_1.2_3.deb)=
+- SHA2-256(chatgp-terminal_1.2_3.tar.gz)=
+
+Others:
+- data abstraction implemented.
+
 #### v1.2.2:20231128
 
 - SHA2-256(chatgp-terminal_1.2_2.deb)=07ae1396bc1f9c97dda26d10bc1a74b5d002f7cddc7b089bcce9e529596720ba
