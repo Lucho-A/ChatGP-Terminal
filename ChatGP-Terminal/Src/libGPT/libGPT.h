@@ -71,7 +71,10 @@ typedef struct _chatgpt ChatGPT;
 typedef struct _chatgptresponse ChatGPTResponse;
 
 ChatGPT * libGPT_getChatGPT_instance();
-int libGPT_init(ChatGPT *, char *, char *, char *, char *, long int, double, double, double, double, int, int);
+int libGPT_init();
+int libGPT_set_timeout(long int);
+int libGPT_set_max_context_msgs(long int);
+
 int libGPT_set_model(ChatGPT *, char *);
 int libGPT_set_api(ChatGPT *, char *);
 int libGPT_set_max_tokens(ChatGPT *, long int);
@@ -80,14 +83,23 @@ int libGPT_set_frequency_penalty(ChatGPT *, double);
 int libGPT_set_presence_penalty(ChatGPT *, double);
 int libGPT_set_temperature(ChatGPT *, double);
 int libGPT_set_top_p(ChatGPT *, double);
-int libGPT_set_timeout(long int);
+int libGPT_set_role(ChatGPT *, char *, char *);
+
+char * libGPT_get_model(ChatGPT *);
+long int libGPT_get_max_tokens(ChatGPT *);
+int libGPT_get_n(ChatGPT *);
+double libGPT_get_frequency_penalty(ChatGPT *);
+double libGPT_get_presence_penalty(ChatGPT *);
+double libGPT_get_temperature(ChatGPT *);
+double libGPT_get_top_p(ChatGPT *);
+
 int libGPT_get_service_status(char **);
 int libGPT_send_chat(ChatGPT *,ChatGPTResponse *, char *);
 int libGPT_flush_history(void);
 int libGPT_import_session_file(char *);
 int libGPT_export_session_file(char *);
 int libGPT_save_message(char *, bool);
-int libGPT_clean(ChatGPT *);
+int libGPT_free(ChatGPT *);
 
 char * libGPT_error(int);
 
@@ -101,6 +113,7 @@ unsigned int libGPT_get_response_promptTokens(ChatGPTResponse *);
 unsigned int libGPT_get_response_completionTokens(ChatGPTResponse *);
 unsigned int libGPT_get_response_totalTokens(ChatGPTResponse *);
 int libGPT_clean_response(ChatGPTResponse *);
+int libGPT_free_response(ChatGPTResponse *);
 
 void dbg(char *);
 

@@ -38,7 +38,7 @@ typedef struct _chatgpt{
 	long int maxTokens;
 	double frequencyPenalty;
 	double presencePenalty;
-	double top_p;
+	double topP;
 	double temperature;
 	int n;
 }ChatGPT;
@@ -68,58 +68,29 @@ typedef struct Messages{
 
 static Messages *historyContext=NULL;
 static int contHistoryContext=0;
-static int maxHistoryContext=0;
+static int maxHistoryContext=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS;
 static long int recvTimeOut=SOCKET_RECV_TIMEOUT_MS;
+
+int libGPT_init(){
+	SSL_library_init();
+	return RETURN_OK;
+}
 
 ChatGPT * libGPT_getChatGPT_instance() {
 	ChatGPT *cgpt=(ChatGPT*)malloc(sizeof(ChatGPT));
+	if(cgpt==NULL) return NULL;
+	cgpt->model=NULL;
+	cgpt->apiKey=NULL;
+	cgpt->systemRole=NULL;
+	if(libGPT_set_model(cgpt, LIBGPT_DEFAULT_MODEL)!=RETURN_OK) return NULL;
+	if(libGPT_set_role(cgpt, LIBGPT_DEFAULT_ROLE, NULL)!=RETURN_OK) return NULL;
+	cgpt->maxTokens=LIBGPT_DEFAULT_MAX_TOKENS;
+	cgpt->frequencyPenalty=LIBGPT_DEFAULT_FREQ_PENALTY;
+	cgpt->presencePenalty=LIBGPT_DEFAULT_PRES_PENALTY;
+	cgpt->topP=LIBGPT_DEFAULT_TOP_P;
+	cgpt->temperature=LIBGPT_DEFAULT_TEMPERATURE;
+	cgpt->n=LIBGPT_DEFAULT_N;
 	return cgpt;
-}
-
-int libGPT_set_model(ChatGPT *cgpt, char *model){
-	if(model==NULL) model="";
-	cgpt->model=malloc(strlen(model)+1);
-	if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(cgpt->model,strlen(model)+1,"%s",model);
-	return RETURN_OK;
-}
-
-int libGPT_set_api(ChatGPT *cgpt, char *apiKey){
-	if(apiKey==NULL) apiKey="";
-	cgpt->apiKey=malloc(strlen(apiKey)+1);
-	if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
-	snprintf(cgpt->apiKey,strlen(apiKey)+1,"%s",apiKey);
-	return RETURN_OK;
-}
-
-int libGPT_set_max_tokens(ChatGPT *cgpt, long int maxTokens){
-	cgpt->maxTokens=maxTokens;
-	return RETURN_OK;
-}
-
-int libGPT_set_n(ChatGPT *cgpt, int n){
-	cgpt->n=n;
-	return RETURN_OK;
-}
-
-int libGPT_set_frequency_penalty(ChatGPT *cgpt, double fp){
-	cgpt->frequencyPenalty=fp;
-	return RETURN_OK;
-}
-
-int libGPT_set_presence_penalty(ChatGPT *cgpt, double pp){
-	cgpt->presencePenalty=pp;
-	return RETURN_OK;
-}
-
-int libGPT_set_top_p(ChatGPT *cgpt, double top_p){
-	cgpt->top_p=top_p;
-	return RETURN_OK;
-}
-
-int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
-	cgpt->temperature=temperature;
-	return RETURN_OK;
 }
 
 static int parse_string(char **stringTo, char *stringFrom){
@@ -167,122 +138,262 @@ static int parse_string(char **stringTo, char *stringFrom){
 	return RETURN_OK;
 }
 
-int libGPT_init(ChatGPT *cgpt, char *model, char *api, char *systemRole, char *roleFile, long int maxTokens,
-		double freqPenalty, double presPenalty, double top_p, double temperature, int n, int maxContextMessage){
-	if(cgpt==NULL) return LIBGPT_NULL_STRUCT_ERROR;
-	SSL_library_init();
-	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
-	int resp=0;
-	if((resp=libGPT_set_model(cgpt,model))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_api(cgpt,api))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_max_tokens(cgpt,maxTokens))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_frequency_penalty(cgpt,freqPenalty))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_presence_penalty(cgpt,presPenalty))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_top_p(cgpt,top_p))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_temperature(cgpt,temperature))!=RETURN_OK) return resp;
-	if((resp=libGPT_set_n(cgpt,n))!=RETURN_OK) return resp;
-	if(roleFile!=NULL){
-		FILE *f=fopen(roleFile,"r");
-		if(f==NULL) return LIBGPT_OPENING_ROLE_FILE_ERROR;
-		char *line=NULL;
-		size_t len=0;
-		ssize_t chars=0;
-		char *buffer=malloc(1);
-		memset(buffer,0,1);
-		if(buffer==NULL) return LIBGPT_MALLOC_ERROR;
-		if(systemRole!=NULL){
-			buffer=realloc(buffer,strlen(buffer)+strlen(systemRole)+3);
-			if(buffer==NULL) return LIBGPT_REALLOC_ERROR;
-			snprintf(buffer,strlen(systemRole)+3,"%s. ",systemRole);
+int libGPT_set_model(ChatGPT *cgpt, char *model){
+	if(cgpt!=NULL){
+		if(model==NULL) model="";
+		if(cgpt->model!=NULL){
+			free(cgpt->model);
+			cgpt->model=NULL;
 		}
-		while((chars=getline(&line, &len, f))!=-1){
-			buffer=realloc(buffer,strlen(buffer)+strlen(line)+1);
-			if(buffer==NULL){
-				free(line);
-				free(buffer);
-				return LIBGPT_REALLOC_ERROR;
+		cgpt->model=malloc(strlen(model)+1);
+		if(cgpt->model==NULL) return LIBGPT_MALLOC_ERROR;
+		snprintf(cgpt->model,strlen(model)+1,"%s",model);
+	}
+	return RETURN_OK;
+}
+
+int libGPT_set_api(ChatGPT *cgpt, char *apiKey){
+	if(cgpt!=NULL){
+		if(apiKey==NULL) apiKey="";
+		if(cgpt->apiKey!=NULL){
+			free(cgpt->apiKey);
+			cgpt->apiKey=NULL;
+		}
+		cgpt->apiKey=malloc(strlen(apiKey)+1);
+		if(cgpt->apiKey==NULL) return LIBGPT_MALLOC_ERROR;
+		snprintf(cgpt->apiKey,strlen(apiKey)+1,"%s",apiKey);
+	}
+	return RETURN_OK;
+}
+
+int libGPT_set_max_tokens(ChatGPT *cgpt, long int maxTokens){
+	if(cgpt!=NULL) cgpt->maxTokens=maxTokens;
+	return RETURN_OK;
+}
+
+int libGPT_set_n(ChatGPT *cgpt, int n){
+	if(cgpt!=NULL) cgpt->n=n;
+	return RETURN_OK;
+}
+
+int libGPT_set_frequency_penalty(ChatGPT *cgpt, double fp){
+	if(cgpt!=NULL) cgpt->frequencyPenalty=fp;
+	return RETURN_OK;
+}
+
+int libGPT_set_presence_penalty(ChatGPT *cgpt, double pp){
+	if(cgpt!=NULL) cgpt->presencePenalty=pp;
+	return RETURN_OK;
+}
+
+int libGPT_set_top_p(ChatGPT *cgpt, double top_p){
+	if(cgpt!=NULL) cgpt->topP=top_p;
+	return RETURN_OK;
+}
+
+int libGPT_set_temperature(ChatGPT *cgpt, double temperature){
+	if(cgpt!=NULL) cgpt->temperature=temperature;
+	return RETURN_OK;
+}
+
+int libGPT_set_role(ChatGPT *cgpt, char *systemRole, char *roleFile){
+	if(cgpt!=NULL){
+		if(cgpt->systemRole!=NULL) free(cgpt->systemRole);
+		if(roleFile!=NULL){
+			FILE *f=fopen(roleFile,"r");
+			if(f==NULL) return LIBGPT_OPENING_ROLE_FILE_ERROR;
+			char *line=NULL;
+			size_t len=0;
+			ssize_t chars=0;
+			char *buffer=malloc(1);
+			memset(buffer,0,1);
+			if(buffer==NULL) return LIBGPT_MALLOC_ERROR;
+			if(systemRole!=NULL){
+				buffer=realloc(buffer,strlen(buffer)+strlen(systemRole)+3);
+				if(buffer==NULL) return LIBGPT_REALLOC_ERROR;
+				snprintf(buffer,strlen(systemRole)+3,"%s. ",systemRole);
 			}
-			strcat(buffer,line);
-		}
-		free(line);
-		parse_string(&cgpt->systemRole, buffer);
-		free(buffer);
-		fclose(f);
-	}else{
-		if(systemRole!=NULL){
-			cgpt->systemRole=malloc(strlen(systemRole)+2);
-			if(cgpt->systemRole ==NULL) return LIBGPT_MALLOC_ERROR;
-			snprintf(cgpt->systemRole,strlen(systemRole)+2,"%s.",systemRole);
+			while((chars=getline(&line, &len, f))!=-1){
+				buffer=realloc(buffer,strlen(buffer)+strlen(line)+1);
+				if(buffer==NULL){
+					free(line);
+					free(buffer);
+					return LIBGPT_REALLOC_ERROR;
+				}
+				strcat(buffer,line);
+			}
+			free(line);
+			parse_string(&cgpt->systemRole, buffer);
+			free(buffer);
+			fclose(f);
 		}else{
-			cgpt->systemRole=LIBGPT_DEFAULT_ROLE;
+			if(systemRole!=NULL){
+				cgpt->systemRole=malloc(strlen(systemRole)+2);
+				if(cgpt->systemRole ==NULL) return LIBGPT_MALLOC_ERROR;
+				snprintf(cgpt->systemRole,strlen(systemRole)+2,"%s.",systemRole);
+			}else{
+				cgpt->systemRole=LIBGPT_DEFAULT_ROLE;
+			}
 		}
 	}
-	maxHistoryContext=maxContextMessage;
 	return RETURN_OK;
+}
+
+char * libGPT_get_model(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->model;
+	return NULL;
+}
+
+long int libGPT_get_max_tokens(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->maxTokens;
+	return RETURN_ERROR;
+}
+
+int libGPT_get_n(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->n;
+	return RETURN_ERROR;
+}
+
+double libGPT_get_frequency_penalty(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->frequencyPenalty;
+	return RETURN_ERROR;
+}
+
+double libGPT_get_presence_penalty(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->presencePenalty;
+	return RETURN_ERROR;
+}
+
+double libGPT_get_temperature(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->temperature;
+	return RETURN_ERROR;
+}
+
+double libGPT_get_top_p(ChatGPT *cgpt){
+	if(cgpt!=NULL) return cgpt->topP;
+	return RETURN_ERROR;
 }
 
 ChatGPTResponse * libGPT_getChatGPTResponse_instance() {
 	ChatGPTResponse *cgptr=(ChatGPTResponse*)malloc(sizeof(ChatGPTResponse));
+	cgptr->model=NULL;
+	cgptr->created=0;
+	cgptr->httpResponse=NULL;
+	cgptr->choices=NULL;
+	cgptr->responses=0;
+	cgptr->promptTokens=0;
+	cgptr->completionTokens=0;
+	cgptr->totalTokens=0;
 	return cgptr;
 }
 
-int libGPT_clean(ChatGPT *cgpt){
-	if(cgpt->model!=NULL) free(cgpt->model);
-	if(cgpt->apiKey!=NULL) free(cgpt->apiKey);
-	if(cgpt->systemRole!=NULL && cgpt->systemRole[0]!=0) free(cgpt->systemRole);
-	free(cgpt);
+int libGPT_free(ChatGPT *cgpt){
+	if(cgpt!=NULL){
+		if(cgpt->model!=NULL){
+			free(cgpt->model);
+			cgpt->model=NULL;
+		}
+		if(cgpt->apiKey!=NULL){
+			free(cgpt->apiKey);
+			cgpt->apiKey=NULL;
+		}
+		if(cgpt->systemRole!=NULL){
+			free(cgpt->systemRole);
+			cgpt->systemRole=NULL;
+		}
+		free(cgpt);
+	}
 	libGPT_flush_history();
 	return RETURN_OK;
 }
 
-int libGPT_clean_response(ChatGPTResponse *cgptResponse){
-	if(cgptResponse->model!=NULL) free(cgptResponse->model);
-	if(cgptResponse->httpResponse!=NULL) free(cgptResponse->httpResponse);
-	for(int i=0;i<cgptResponse->responses;i++){
-		if(cgptResponse->choices[i].content!=NULL) free(cgptResponse->choices[i].content);
-		if(cgptResponse->choices[i].contentFormatted!=NULL) free(cgptResponse->choices[i].contentFormatted);
-		if(cgptResponse->choices[i].finishReason!=NULL) free(cgptResponse->choices[i].finishReason);
+int libGPT_free_response(ChatGPTResponse *cgptResponse){
+	if(cgptResponse!=NULL){
+		libGPT_clean_response(cgptResponse);
+		free(cgptResponse);
+		cgptResponse=NULL;
 	}
-	free(cgptResponse->choices);
-	free(cgptResponse);
+	return RETURN_OK;
+}
+
+int libGPT_clean_response(ChatGPTResponse *cgptResponse){
+	if(cgptResponse!=NULL){
+		if(cgptResponse->model!=NULL){
+			free(cgptResponse->model);
+			cgptResponse->model=NULL;
+		}
+		if(cgptResponse->httpResponse!=NULL){
+			free(cgptResponse->httpResponse);
+			cgptResponse->httpResponse=NULL;
+		}
+		for(int i=0;i<cgptResponse->responses;i++){
+			if(cgptResponse->choices[i].content!=NULL){
+				free(cgptResponse->choices[i].content);
+				cgptResponse->choices[i].content=NULL;
+			}
+			if(cgptResponse->choices[i].contentFormatted!=NULL){
+				free(cgptResponse->choices[i].contentFormatted);
+				cgptResponse->choices[i].contentFormatted=NULL;
+			}
+			if(cgptResponse->choices[i].finishReason!=NULL){
+				free(cgptResponse->choices[i].finishReason);
+				cgptResponse->choices[i].finishReason=NULL;
+			}
+		}
+		free(cgptResponse->choices);
+	}
 	return RETURN_OK;
 }
 
 long libGPT_get_response_creation(ChatGPTResponse *cgptr){
-	return cgptr->created;
+	if(cgptr!=NULL) return cgptr->created;
+	return RETURN_ERROR;
 }
 
 unsigned int libGPT_get_response_responses(ChatGPTResponse *cgptr){
-	return cgptr->responses;
+	if(cgptr!=NULL) return cgptr->responses;
+	return RETURN_ERROR;
 }
 
 char * libGPT_get_response_model(ChatGPTResponse *cgptr){
-	return cgptr->model;
+	if(cgptr!=NULL) return cgptr->model;
+	return NULL;
 }
 
 char * libGPT_get_response_contentFormatted(ChatGPTResponse *cgptr, int index){
-	return cgptr->choices[index].contentFormatted;
+	if(cgptr!=NULL) return cgptr->choices[index].contentFormatted;
+	return NULL;
 }
 
 char * libGPT_get_response_finishReason(ChatGPTResponse *cgptr, int index){
-	return cgptr->choices[index].finishReason;
+	if(cgptr!=NULL) return cgptr->choices[index].finishReason;
+	return NULL;
 }
 
 unsigned int libGPT_get_response_promptTokens(ChatGPTResponse *cgptr){
-	return cgptr->promptTokens;
+	if(cgptr!=NULL) return cgptr->promptTokens;
+	return RETURN_ERROR;
 }
 
 unsigned int libGPT_get_response_completionTokens(ChatGPTResponse *cgptr){
-	return cgptr->completionTokens;
+	if(cgptr!=NULL) return cgptr->completionTokens;
+	return RETURN_ERROR;
 }
 
 unsigned int libGPT_get_response_totalTokens(ChatGPTResponse *cgptr){
-	return cgptr->totalTokens;
+	if(cgptr!=NULL) return cgptr->totalTokens;
+	return RETURN_ERROR;
 }
 
 int libGPT_set_timeout(long int timeOut){
 	if(timeOut<0) return LIBGPT_RECV_TIMEOUT_ERROR;
 	(timeOut==0)?(recvTimeOut=SOCKET_RECV_TIMEOUT_MS):(recvTimeOut=timeOut);
+	return RETURN_OK;
+}
+
+int libGPT_set_max_context_msgs(long int maxContextMessage){
+	if(maxContextMessage<LIBGPT_MIN_CONTEXT_MSGS) return LIBGPT_CONTEXT_MSGS_ERROR;
+	maxHistoryContext=maxContextMessage;
 	return RETURN_OK;
 }
 
@@ -373,13 +484,15 @@ static void create_new_history_message(char *userMessage, char *assistantMessage
 static int parse_result(char *messageSent, ChatGPTResponse *cgptResponse){
 	char **buffer=NULL;
 	if(strstr(cgptResponse->httpResponse,"\"error\": {")!=NULL){
-		get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,&buffer,'\"');
-		cgptResponse->choices=(struct Choices *) malloc(1 * sizeof(struct Choices));
+		if(get_string_from_token(cgptResponse->httpResponse,"\"message\": \"" ,&buffer,'\"')==RETURN_ERROR) return LIBGPT_UNEXPECTED_JSON_FORMAT_ERROR;
+		cgptResponse->choices=(struct Choices *) malloc(sizeof(struct Choices));
 		cgptResponse->choices[0].content=malloc(strlen(buffer[0])+1);
 		memset(cgptResponse->choices[0].content,0,strlen(buffer[0])+1);
 		snprintf(cgptResponse->choices[0].content,strlen(buffer[0])+1,"%s", buffer[0]);
 		cgptResponse->choices[0].contentFormatted=NULL;
 		format_string(&cgptResponse->choices[0].contentFormatted, buffer[0]);
+		cgptResponse->responses=1;
+		cgptResponse->choices[0].finishReason=NULL;
 		free(messageSent);
 		free(buffer[0]);
 		free(buffer);
@@ -775,14 +888,7 @@ int libGPT_get_service_status(char **statusDescription){
 }
 
 int libGPT_send_chat(ChatGPT *cgpt, ChatGPTResponse *cgptResponse, char *message){
-	cgptResponse->model=NULL;
-	cgptResponse->created=0;
-	cgptResponse->httpResponse=NULL;
-	cgptResponse->choices=NULL;
-	cgptResponse->responses=0;
-	cgptResponse->promptTokens=0;
-	cgptResponse->completionTokens=0;
-	cgptResponse->totalTokens=0;
+	libGPT_clean_response(cgptResponse);
 	char *messageParsed=NULL;
 	parse_string(&messageParsed, message);
 	char *context=malloc(1), *buf=NULL;
@@ -841,15 +947,15 @@ int libGPT_send_chat(ChatGPT *cgpt, ChatGPTResponse *cgptResponse, char *message
 			"\"temperature\": %.2f"
 			"}";
 	len=strlen(template)+strlen(cgpt->model)+strlen(cgpt->systemRole)+strlen(context)+sizeof(cgpt->maxTokens)
-								+sizeof(cgpt->n) + sizeof(cgpt->frequencyPenalty)+ sizeof(cgpt->presencePenalty)
-								+sizeof(cgpt->top_p)+sizeof(cgpt->temperature);
+												+sizeof(cgpt->n) + sizeof(cgpt->frequencyPenalty)+ sizeof(cgpt->presencePenalty)
+												+sizeof(cgpt->topP)+sizeof(cgpt->temperature);
 	char *payload=malloc(len);
 	if(payload==NULL){
 		free(messageParsed);
 		return LIBGPT_MALLOC_ERROR;
 	}
 	snprintf(payload,len,template,cgpt->model,cgpt->systemRole,context,cgpt->maxTokens,
-			cgpt->n,cgpt->frequencyPenalty,cgpt->presencePenalty,cgpt->top_p,cgpt->temperature);
+			cgpt->n,cgpt->frequencyPenalty,cgpt->presencePenalty,cgpt->topP,cgpt->temperature);
 	free(context);
 	template="POST /v1/chat/completions HTTP/1.1\r\n"
 			"Host: %s\r\n"

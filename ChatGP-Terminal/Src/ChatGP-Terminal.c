@@ -7,7 +7,7 @@
  Copyright   : GNU General Public License v3.0
  Description : Main file
  ============================================================================
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +31,16 @@
 #define BANNER 							printf("\n%s%s v%s by L. <%s>%s\n\n",Colors.h_white,PROGRAM_NAME, PROGRAM_VERSION,PROGRAM_URL,Colors.def);
 
 #define	DEFAULT_RESPONSE_VELOCITY		25000
+
+struct SessionParams{
+	char *model;
+	double freqPenalty;
+	int n;
+	long int maxTokens;
+	double presPenalty;
+	double topP;
+	double temperature;
+}SessionParams;
 
 struct Colors{
 	char *yellow;
@@ -168,7 +178,8 @@ void signal_handler(int signalType){
 		canceled=TRUE;
 		if(espeak_IsPlaying()) espeak_Cancel();
 		break;
-	default:
+	case SIGPIPE:
+		print_error("'SIGPIPE' signal received: the write end of the pipe or socket is closed.","", FALSE);
 		break;
 	}
 }
@@ -189,7 +200,7 @@ void send_chat(ChatGPT *cgpt, char *message, long int responseVelocity, bool sho
 		,bool showFinishedStatus, bool showPromptTokens, bool showCompletionTokens, bool showTotalTokens,bool tts,
 		char *logFile, bool checkStatus){
 	ChatGPTResponse *cgptResponse=libGPT_getChatGPTResponse_instance();
-	if(cgptResponse==NULL) print_error("Getting instance error. ","", TRUE);
+	if(cgptResponse==NULL) print_error("Getting ChatGPTResponse instance error. ","", TRUE);
 	int resp=0;
 	if((resp=libGPT_send_chat(cgpt, cgptResponse, message))!=RETURN_OK){
 		switch(resp){
@@ -224,20 +235,21 @@ void send_chat(ChatGPT *cgpt, char *message, long int responseVelocity, bool sho
 			if(log_response(cgptResponse, logFile)!=RETURN_OK) print_error("Error logging file. ",strerror(errno),FALSE);
 		}
 	}
-	libGPT_clean_response(cgptResponse);
+	libGPT_free_response(cgptResponse);
 }
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, signal_handler);
-	char *apikey="",*role=NULL,*message=NULL,*saveMessagesTo="",*sessionFile=NULL,*roleFile=NULL,*logFile=NULL,*model=NULL;
+	signal(SIGPIPE, signal_handler);
+	init_colors(FALSE);
+	libGPT_init();
+	ChatGPT *cgpt=libGPT_getChatGPT_instance();
+	if(cgpt==NULL) print_error("Getting ChatGPT instance error. ","", TRUE);
+	char *message=NULL,*saveMessagesTo="",*sessionFile=NULL,*logFile=NULL;
 	size_t len=0;
-	int maxTokens=LIBGPT_DEFAULT_MAX_TOKENS, responseVelocity=DEFAULT_RESPONSE_VELOCITY,
-			maxContextMessages=LIBGPT_DEFAULT_MAX_CONTEXT_MSGS, n=LIBGPT_DEFAULT_N;
+	int resp=0, responseVelocity=DEFAULT_RESPONSE_VELOCITY;
 	bool checkStatus=FALSE,alertFinishedStatus=FALSE,showFinishedStatus=FALSE,showPromptTokens=FALSE,
 			showCompletionTokens=FALSE,showTotalTokens=FALSE,textToSpeech=FALSE,csv=FALSE,showModel=FALSE;
-	double freqPenalty=LIBGPT_DEFAULT_FREQ_PENALTY,presPenalty=LIBGPT_DEFAULT_PRES_PENALTY,
-			topP=LIBGPT_DEFAULT_TOP_P,temperature=LIBGPT_DEFAULT_TEMPERATURE;
-	init_colors(FALSE);
 	for(int i=1;i<argc;i+=2){
 		char *tail=NULL;
 		if(strcmp(argv[i],"--version")==0){
@@ -245,58 +257,70 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_SUCCESS);
 		}
 		if(strcmp(argv[i],"--apikeyfile")==0){
+			char *apikey=NULL;
 			if(i+1>=argc) print_error("--apikeyfile: option argument missing. ","",TRUE);
 			FILE *f=fopen(argv[i+1],"r");
 			if(f==NULL) print_error("Error opening API key file.",strerror(errno),TRUE);
 			while(getline(&apikey, &len, f)!=-1);
-			apikey[strlen(apikey)-1]=0;
 			fclose(f);
+			apikey[strlen(apikey)-1]=0;
+			if((resp=libGPT_set_api(cgpt, apikey))!=RETURN_OK){
+				free(apikey);
+				print_error("",libGPT_error(resp),TRUE);
+			}
+			free(apikey);
 			continue;
 		}
 		if(strcmp(argv[i],"--apikey")==0){
 			if(i+1>=argc) print_error("--apikey: option argument missing. ","",TRUE);
-			apikey=argv[i+1];
+			if((resp=libGPT_set_api(cgpt, argv[i+1]))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--role")==0){
 			if(i+1>=argc) print_error("--role: option argument missing. ","",TRUE);
-			role=argv[i+1];
+			if((resp=libGPT_set_role(cgpt, argv[i+1],NULL))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--max-tokens")==0){
 			if(i+1>=argc) print_error("--max-tokens: option argument missing. ","",TRUE);
-			maxTokens=strtoul(argv[i+1],&tail,10);
+			int maxTokens=strtoul(argv[i+1],&tail,10);
 			if(*tail!='\0') print_error("'Max.Tokens' value not valid. ","",TRUE);
+			if((resp=libGPT_set_max_tokens(cgpt, maxTokens))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--freq-penalty")==0){
 			if(i+1>=argc) print_error("--freq-penalty: option argument missing. ","",TRUE);
-			freqPenalty=strtod(argv[i+1],&tail);
+			double freqPenalty=strtod(argv[i+1],&tail);
 			if(*tail!='\0') print_error("'Frequency Penalty' value not valid. ","",TRUE);
+			if((resp=libGPT_set_frequency_penalty(cgpt, freqPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--pres-penalty")==0){
 			if(i+1>=argc) print_error("--pres-penalty: option argument missing. ","",TRUE);
-			presPenalty=strtod(argv[i+1],&tail);
+			double presPenalty=strtod(argv[i+1],&tail);
 			if(*tail!='\0') print_error("'Presence Penalty' value not valid. ","",TRUE);
+			if((resp=libGPT_set_presence_penalty(cgpt, presPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--top-p")==0){
 			if(i+1>=argc) print_error("--top-p: option argument missing. ","",TRUE);
-			topP=strtod(argv[i+1],&tail);
+			double topP=strtod(argv[i+1],&tail);
 			if(*tail!='\0') print_error("'Top P' value not valid. ","",TRUE);
+			if((resp=libGPT_set_top_p(cgpt, topP))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--temperature")==0){
 			if(i+1>=argc) print_error("--temperature: option argument missing. ","",TRUE);
-			temperature=strtod(argv[i+1],&tail);
+			double temperature=strtod(argv[i+1],&tail);
 			if(*tail!='\0') print_error("'Temperature' value not valid. ","",TRUE);
+			if((resp=libGPT_set_temperature(cgpt, temperature))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--n")==0){
 			if(i+1>=argc) print_error("--n: option argument missing. ","",TRUE);
-			n=strtoul(argv[i+1],&tail,10);
+			int n=strtoul(argv[i+1],&tail,10);
 			if(*tail!='\0') print_error("'N' value not valid. ","",TRUE);
+			if((resp=libGPT_set_n(cgpt, n))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--timeout")==0){
@@ -313,8 +337,9 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--max-context-messages")==0){
 			if(i+1>=argc) print_error("--max-context-messages: option argument missing. ","",TRUE);
-			maxContextMessages=strtod(argv[i+1],&tail);
+			int maxContextMessages=strtoul(argv[i+1],&tail,10);
 			if(*tail!='\0') print_error("'Max. Context Messages' value not valid. ","",TRUE);
+			if((resp=libGPT_set_max_context_msgs(maxContextMessages))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--session-file")==0){
@@ -330,7 +355,7 @@ int main(int argc, char *argv[]) {
 			FILE *f=fopen(argv[i+1],"r");
 			if(f==NULL) print_error("Error opening role file. ",strerror(errno),TRUE);
 			fclose(f);
-			roleFile=argv[i+1];
+			if((resp=libGPT_set_role(cgpt,NULL, argv[i+1]))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--log-file")==0){
@@ -366,8 +391,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(strcmp(argv[i],"--model")==0){
 			if(i+1>=argc) print_error("--model: option argument missing. ","",TRUE);
-			if(model!=NULL) print_error("Duplicated model parameter found. ","",TRUE);
-			model=argv[i+1];
+			if((resp=libGPT_set_model(cgpt, argv[i+1]))!=RETURN_OK) print_error("",libGPT_error(resp),TRUE);
 			continue;
 		}
 		if(strcmp(argv[i],"--check-status")==0){
@@ -429,14 +453,6 @@ int main(int argc, char *argv[]) {
 		usage(argv[0]);
 		print_error(argv[i],": argument not recognized",TRUE);
 	}
-	if(model==NULL) model=LIBGPT_DEFAULT_MODEL;
-	ChatGPT *cgpt=libGPT_getChatGPT_instance();
-	if(cgpt==NULL) print_error("Getting instance error. ","", TRUE);
-	int resp=0;
-	if((resp=libGPT_init(cgpt, model, apikey, role, roleFile, maxTokens, freqPenalty, presPenalty,
-			topP, temperature, n, maxContextMessages))!=RETURN_OK){
-		print_error("Initialization error. ",libGPT_error(resp),TRUE);
-	}
 	if(sessionFile!=NULL){
 		if((resp=libGPT_import_session_file(sessionFile))!=RETURN_OK)
 			print_error("Error importing session file. ",libGPT_error(resp),FALSE);
@@ -445,11 +461,20 @@ int main(int argc, char *argv[]) {
 		init_colors(TRUE);
 		send_chat(cgpt, message, 0, showModel, alertFinishedStatus, showFinishedStatus, showPromptTokens, showCompletionTokens,
 				showTotalTokens, FALSE, logFile, checkStatus);
-		libGPT_clean(cgpt);
+		libGPT_free(cgpt);
 		exit(EXIT_SUCCESS);
 	}
 	if(checkStatus) check_service_status();
 	rl_getc_function=readline_input;
+	struct SessionParams sp;
+	sp.model=malloc(strlen(libGPT_get_model(cgpt))+1);
+	snprintf(sp.model,strlen(libGPT_get_model(cgpt))+1,"%s",libGPT_get_model(cgpt));
+	sp.freqPenalty=libGPT_get_frequency_penalty(cgpt);
+	sp.maxTokens=libGPT_get_max_tokens(cgpt);
+	sp.n=libGPT_get_n(cgpt);
+	sp.presPenalty=libGPT_get_presence_penalty(cgpt);
+	sp.temperature=libGPT_get_temperature(cgpt);
+	sp.topP=libGPT_get_top_p(cgpt);
 	char *messagePrompted=NULL;
 	do{
 		exitProgram=FALSE;
@@ -489,7 +514,7 @@ int main(int argc, char *argv[]) {
 					cont++;
 				}
 			}
-			if (arg[0]==0) strcpy(arg,model);
+			if (arg[0]==0) strcpy(arg,sp.model);
 			int resp=0;
 			if((resp=libGPT_set_model(cgpt, arg))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -517,7 +542,7 @@ int main(int argc, char *argv[]) {
 				print_error("'Max.Tokens' value not valid. ","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) lmaxTokens = maxTokens;
+			if (arg[0]==0) lmaxTokens = sp.maxTokens;
 			int resp=0;
 			if((resp=libGPT_set_max_tokens(cgpt, lmaxTokens))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -531,7 +556,7 @@ int main(int argc, char *argv[]) {
 				print_error("'N' value not valid. ","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) ln=n;
+			if (arg[0]==0) ln=sp.n;
 			int resp=0;
 			if((resp=libGPT_set_n(cgpt, ln))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -545,7 +570,7 @@ int main(int argc, char *argv[]) {
 				print_error("'Frequency Penalty' value not valid.","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) lfreqPenalty=freqPenalty;
+			if (arg[0]==0) lfreqPenalty=sp.freqPenalty;
 			int resp=0;
 			if((resp=libGPT_set_frequency_penalty(cgpt, lfreqPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -559,7 +584,7 @@ int main(int argc, char *argv[]) {
 				print_error("'Presence Penalty' value not valid.","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) lpresPenalty=presPenalty;
+			if (arg[0]==0) lpresPenalty=sp.presPenalty;
 			int resp=0;
 			if((resp=libGPT_set_presence_penalty(cgpt, lpresPenalty))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -573,7 +598,7 @@ int main(int argc, char *argv[]) {
 				print_error("'Top P' value not valid.","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) ltopP=topP;
+			if (arg[0]==0) ltopP=sp.topP;
 			int resp=0;
 			if((resp=libGPT_set_top_p(cgpt, ltopP))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
 			continue;
@@ -587,9 +612,19 @@ int main(int argc, char *argv[]) {
 				print_error("'Temperature' value not valid.","",FALSE);
 				continue;
 			}
-			if (arg[0]==0) ltemperature=temperature;
+			if (arg[0]==0) ltemperature=sp.temperature;
 			int resp=0;
 			if((resp=libGPT_set_temperature(cgpt, ltemperature))!=RETURN_OK) print_error("",libGPT_error(resp),FALSE);
+			continue;
+		}
+		if(strstr(messagePrompted,"params;")==messagePrompted){
+			printf("\n%sModel: %s%s",Colors.h_white, Colors.def, libGPT_get_model(cgpt));
+			printf("\n%sMax. Tokens: %s%ld",Colors.h_white, Colors.def,libGPT_get_max_tokens(cgpt));
+			printf("\n%sN: %s%d",Colors.h_white, Colors.def,libGPT_get_n(cgpt));
+			printf("\n%sFreq. Penalty: %s%.4f",Colors.h_white, Colors.def,libGPT_get_frequency_penalty(cgpt));
+			printf("\n%sPres. Penalty: %s%.4f",Colors.h_white, Colors.def,libGPT_get_presence_penalty(cgpt));
+			printf("\n%sTemp.: %s%.4f",Colors.h_white, Colors.def,libGPT_get_temperature(cgpt));
+			printf("\n%sTop P: %s%.4f\n",Colors.h_white, Colors.def,libGPT_get_top_p(cgpt));
 			continue;
 		}
 		send_chat(cgpt, messagePrompted, responseVelocity, showModel, alertFinishedStatus, showFinishedStatus, showPromptTokens,
@@ -600,7 +635,8 @@ int main(int argc, char *argv[]) {
 		if(libGPT_export_session_file(sessionFile)!=RETURN_OK) print_error("Error dumping session. ",libGPT_error(resp),FALSE);
 	}
 	if(textToSpeech) espeak_Terminate();
-	libGPT_clean(cgpt);
+	libGPT_free(cgpt);
+	free(sp.model);
 	rl_clear_history();
 	printf("\n");
 	exit(EXIT_SUCCESS);

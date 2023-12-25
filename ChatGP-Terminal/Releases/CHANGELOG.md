@@ -1,10 +1,17 @@
-#### v1.2.3:2023XXXX-Under Dev./Testing
+#### v1.2.3:20231225-Christmas Edition hhaha
 
-- SHA2-256(chatgp-terminal_1.2_3.deb)=
-- SHA2-256(chatgp-terminal_1.2_3.tar.gz)=
+- SHA2-256(chatgp-terminal_1.2_3.deb)=2d2d128c384a8903ccb37390490d86c1e0384b97fb705d8d06a7259f2329808d
+- SHA2-256(chatgp-terminal_1.2_3.tar.gz)=9837405d2a6b037e7f2a8c5d48c77178f11c6cc0950a92abe242a37c73816c21
+
+Features:
+- Added option 'params;' when prompting, for showing the parameters set up.
+
+Bug-Fixed:
+- catch SIGPIPE signal. In some -rare- cases, I found that 'libcrypto.so.3' could raise the exception.
 
 Others:
 - data abstraction implemented.
+- minor changes, code optimized & code cleaned-up.
 
 #### v1.2.2:20231128
 
